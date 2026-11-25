@@ -1,0 +1,21 @@
+{
+  "name": "carol-live-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "npm --prefix ../web run build && wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply carol-live --local",
+    "db:migrate:remote": "wrangler d1 migrations apply carol-live --remote",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@team-carol/design-system": "^0.1.1",
+    "hono": "^4.13.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261123.1",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.168.0"
+  }
+}

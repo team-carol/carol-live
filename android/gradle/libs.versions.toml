@@ -1,0 +1,15 @@
+[versions]
+# keep agp identical to RootEncoder (included build) to avoid plugin classpath conflicts
+agp = "9.3.2"
+appcompat = "1.6.1"
+work = "2.10.0"
+# same as RootEncoder
+coroutines = "1.11.0"
+
+[libraries]
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+androidx-work = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

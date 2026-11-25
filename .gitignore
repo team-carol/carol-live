@@ -1,10 +1,19 @@
+# android
 *.iml
 .gradle
-/local.properties
-/.idea
-/build
-/app/build
-.kotlin
+/android/local.properties
+/android/.idea
+/android/build
+/android/app/build
+/android/.kotlin
+/android/RootEncoder/
+# release signing: never commit
+/android/keystore.properties
+*.jks
+*.keystore
+# node
+node_modules
+/web/dist
+/server/.wrangler
+/server/.dev.vars
 .DS_Store
-# local clone of RootEncoder (see README)
-/RootEncoder/

@@ -1,35 +1,127 @@
-# roena live
+# carol live
 
-마이마이 플레이를 폰 하나로 유튜브 라이브하기 위한 개인용 안드로이드 송출 앱.
-송출은 [RootEncoder](https://github.com/pedroSG94/RootEncoder), UI는 [Carol Design System](https://github.com/team-carol/carol-design-system) 토큰을 옮겨서 씀.
-
-## 폴더 구조
+마이마이 플레이를 폰 하나로 유튜브 라이브하고, 녹화본을 웹에서 보고 원하는 구간만 잘라 받는 프로젝트.
+UI는 전부 [Carol Design System](https://github.com/team-carol/carol-design-system)을 씀.
 
 ```
-roena-live/
-├─ RootEncoder/        # RootEncoder 로컬 클론 (git에는 안 올림)
-├─ app/                # 앱
-│  └─ src/main/res/values/carol_tokens.xml   # 캐롤 색·모서리·간격 토큰. hex는 여기에만 있음
-└─ settings.gradle.kts # includeBuild("RootEncoder") 로 라이브러리를 소스째 연결
+carol-live/
+├─ android/   폰 앱 (Kotlin, RootEncoder) — 송출·녹화·업로드
+├─ server/    Cloudflare Workers + R2 + D1 — 로그인·업로드 API·파일 제공
+└─ web/       React + @team-carol/design-system — 드라이브형 녹화 목록·구간 자르기
 ```
 
-## 빌드
+## 흐름
+
+1. 앱에서 방송(+녹화). 화면이 꺼져도 포그라운드 서비스로 계속 송출됨
+2. 방송이 끝나면 결과 요약 화면이 뜨고, 녹화 파일이 업로드 대기열에 들어감
+3. 와이파이가 잡히면 50MB 조각으로 이어 올림 (끊겨도 이어서), 끝나면 썸네일도 올림
+4. 웹에서 디스코드 로그인 → 기기별 폴더에서 영상 열기 → 시작·끝 지정 → **재인코딩 없이** 잘라 받기
+   (필요한 구간의 바이트만 Range로 받아서 브라우저에서 mp4를 새로 씀)
+
+## android
 
 ```powershell
-# RootEncoder가 없으면 먼저 받기
-git clone --depth 1 https://github.com/pedroSG94/RootEncoder.git
-
+cd android
+git clone --depth 1 https://github.com/pedroSG94/RootEncoder.git   # 처음 한 번 (gitignore 됨)
 .\gradlew.bat :app:assembleDebug
 adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
-## 1차 기능
+- 색·모서리·간격 토큰은 `app/src/main/res/values/carol_tokens.xml` 에만 있음. 다른 곳은 `@color/crl_*`
+- 폰트: Pretendard (OFL, `app/src/main/assets/licenses`)
 
-- 설정 화면: 서버 주소·스트림 키 저장, 1080p/720p, 60/30fps, 영상 비트레이트, 오디오 48kHz·128~192k
-- 마이크: USB 수신기(DJI) 우선 지정, 폰 소리 처리 없는 "원음" 모드, 꽂고 빼면 자동 전환
-- 카메라: AE 프레임 범위를 [60, 60]으로 고정해서 어두워도 프레임 유지, EV 보정 버튼, 핀치 줌, 탭 초점
-- 방송 화면: 상태 배지, 실제 송출 비트레이트·FPS·배터리·온도, 끊기면 자동 재연결(5초 간격 10회)
+## 릴리스 (폰에서 APK 받기)
 
-## 폰트
+`v0.3.1` 같은 태그를 푸시하면 GitHub Actions가 서명된 APK를 만들어 [Releases](https://github.com/team-carol/carol-live/releases)에 올림.
+앱은 최신 릴리스를 확인해서 새 버전이 있으면 화면 오른쪽 위에 **새 버전** 버튼을 띄움 (설정 → 앱 정보 → 업데이트 확인으로도 가능).
+설치할 때만 갤럭시 '보안 위험 자동 차단'을 잠깐 꺼야 함.
 
-Pretendard (SIL OFL 1.1) — `app/src/main/assets/licenses/pretendard-OFL.txt`
+```bash
+git tag v0.3.1 && git push origin v0.3.1
+```
+
+### 서명 키 (처음 한 번)
+
+업데이트가 덮어써지려면 항상 같은 키로 서명해야 함. 키는 레포에 올리지 않음(`.gitignore`).
+
+```powershell
+cd android
+keytool -genkeypair -v -keystore release.jks -storetype PKCS12 -alias carol-live -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=carol live, O=team carol"
+# 비밀번호를 물어보면 하나 정해서 두 번 입력
+
+# 로컬에서 release 빌드할 때 쓰는 파일 (gitignore 됨)
+@"
+storeFile=release.jks
+storePassword=<비밀번호>
+keyAlias=carol-live
+keyPassword=<비밀번호>
+"@ | Set-Content keystore.properties
+
+# GitHub Secret에 넣을 값을 클립보드로 복사
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("release.jks")) | Set-Clipboard
+```
+
+GitHub 레포 → Settings → Secrets and variables → Actions → New repository secret:
+
+| 이름 | 값 |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | 위에서 클립보드로 복사한 값 |
+| `ANDROID_KEYSTORE_PASSWORD` | 비밀번호 |
+| `ANDROID_KEY_ALIAS` | `carol-live` |
+| `ANDROID_KEY_PASSWORD` | 비밀번호 (PKCS12라 같은 값) |
+
+`release.jks`와 비밀번호는 잃어버리면 기존 설치본 위에 업데이트를 못 하니 따로 백업해둘 것.
+
+## server + web 배포
+
+처음 한 번:
+
+1. [디스코드 개발자 포털](https://discord.com/developers/applications)에서 앱 만들기
+   → OAuth2 → Redirects에 `https://<워커 주소>/auth/callback` 추가 → Client ID / Secret 복사
+2. Cloudflare 대시보드에서 R2 사용 설정 (무료 10GB, 결제 수단 등록이 필요할 수 있음)
+3. 리소스 만들기
+   ```bash
+   cd server && npm install
+   npx wrangler login
+   npx wrangler r2 bucket create carol-live-recordings
+   npx wrangler d1 create carol-live        # 나온 database_id를 wrangler.jsonc에 붙여넣기
+   npx wrangler secret put DISCORD_CLIENT_SECRET
+   ```
+4. `wrangler.jsonc`의 `vars` 채우기
+   - `DISCORD_CLIENT_ID`
+   - `ALLOWED_DISCORD_IDS`: 로그인 허용할 팀원 디스코드 ID, 쉼표로 구분
+     (디스코드 설정 → 고급 → 개발자 모드 켜고 프로필 우클릭 → ID 복사)
+   - `STORAGE_CAP_BYTES`: 기본 100GB. 넘으면 팀 전체에서 가장 오래된 녹화부터 지움
+     (R2는 10GB까지 무료, 그 뒤 GB당 월 $0.015라 100GB를 꽉 채워도 월 약 $1.35. 다운로드 트래픽은 무료)
+5. DB 테이블 만들고 배포
+   ```bash
+   npm run db:migrate:remote
+   (cd ../web && npm install)
+   npm run deploy          # web을 빌드해서 워커의 정적 파일로 같이 올림
+   ```
+
+이후 배포는 `cd server && npm run deploy`만 하면 됨.
+
+### 로컬 개발
+
+```bash
+cd server
+printf 'DEV_LOGIN=1\nALLOWED_DISCORD_IDS=dev\nDISCORD_CLIENT_SECRET=x\n' > .dev.vars
+npm run db:migrate:local && npm run dev          # http://localhost:8787
+# 다른 터미널: cd web && npm run dev   (API는 8787로 프록시)
+```
+
+`DEV_LOGIN=1`이면 `/auth/dev?id=dev&name=나`로 디스코드 없이 로그인됨. 운영에는 절대 넣지 말 것.
+
+### 테스트
+
+```bash
+cd web && SAMPLE_DIR=<mp4 폴더> npm test    # mp4 무손실 자르기 (ffmpeg/ffprobe 필요)
+cd server && npm run typecheck
+```
+
+## 앱 ↔ 서버 연결 (기기 페어링)
+
+앱 설정 → 업로드에 서버 주소와 기기 이름(기본값은 폰 이름)을 넣고 **연결하기**
+→ 브라우저에서 디스코드 로그인 한 번 → `carollive://paired`로 앱에 기기 토큰이 돌아옴.
+앱이 연결을 시작할 때 만든 nonce가 같이 돌아와야만 받아들임. 웹의 **기기** 메뉴에서 이름 변경·연결 해제 가능.

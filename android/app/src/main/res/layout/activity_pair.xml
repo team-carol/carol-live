@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/crl_canvas"
+    android:padding="@dimen/crl_space_6">
+
+  <LinearLayout
+      style="@style/Crl.Card"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_gravity="center">
+
+    <TextView
+        android:id="@+id/pair_tag"
+        style="@style/Crl.Tag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="확인 중" />
+
+    <TextView
+        android:id="@+id/pair_title"
+        style="@style/Crl.Text.CardTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/crl_space_4"
+        android:text="기기 연결" />
+
+    <TextView
+        android:id="@+id/pair_body"
+        style="@style/Crl.Text.BodySm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/crl_space_4" />
+
+    <Button
+        android:id="@+id/pair_done"
+        style="@style/Crl.Button.Primary.Large"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/crl_space_7"
+        android:text="확인" />
+  </LinearLayout>
+</FrameLayout>
