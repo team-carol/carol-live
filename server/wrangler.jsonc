@@ -24,7 +24,7 @@
   ],
   "vars": {
     // Discord application (https://discord.com/developers/applications) -> OAuth2 client id
-    "DISCORD_CLIENT_ID": "",
+    "DISCORD_CLIENT_ID": "1575043569956167792",
     // team-wide cap; oldest recordings are deleted to stay under it.
     // R2: first 10 GB free, then $0.015/GB-month -> 100 GB is about $1.35/month, egress is free
     "STORAGE_CAP_BYTES": "107374182400"
