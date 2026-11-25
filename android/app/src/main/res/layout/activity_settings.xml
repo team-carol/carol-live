@@ -254,7 +254,7 @@
           android:layout_width="match_parent"
           android:layout_height="wrap_content"
           android:layout_marginTop="@dimen/crl_space_3"
-          android:hint="https://carol-live.xxx.workers.dev"
+          android:hint="https://live.team-carol.com"
           android:importantForAutofill="no"
           android:inputType="textUri" />
 

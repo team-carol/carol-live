@@ -41,6 +41,9 @@ import java.util.concurrent.TimeUnit
 object UploadConfig {
   private const val PREFS = "carol_live_upload"
 
+  /** team carol server; prefilled in settings, can be changed there */
+  const val DEFAULT_SERVER = "https://live.team-carol.com"
+
   data class Paired(val server: String, val token: String, val deviceName: String, val account: String?)
 
   private fun p(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -65,8 +68,11 @@ object UploadConfig {
     p(ctx).edit().remove("token").remove("account").apply()
   }
 
-  /** server typed in settings (kept even when not paired) */
-  fun draftServer(ctx: Context): String = p(ctx).getString("draftServer", null) ?: paired(ctx)?.server ?: ""
+  /** server typed in settings (kept even when not paired); blank falls back to the team server */
+  fun draftServer(ctx: Context): String =
+    p(ctx).getString("draftServer", null)?.takeIf { it.isNotBlank() }
+      ?: paired(ctx)?.server?.takeIf { it.isNotBlank() }
+      ?: DEFAULT_SERVER
 
   fun draftDeviceName(ctx: Context): String =
     p(ctx).getString("draftDeviceName", null) ?: paired(ctx)?.deviceName ?: defaultDeviceName(ctx)
