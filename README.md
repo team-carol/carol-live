@@ -30,6 +30,48 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 - 색·모서리·간격 토큰은 `app/src/main/res/values/carol_tokens.xml` 에만 있음. 다른 곳은 `@color/crl_*`
 - 폰트: Pretendard (OFL, `app/src/main/assets/licenses`)
 
+## 릴리스 (폰에서 APK 받기)
+
+`v0.3.1` 같은 태그를 푸시하면 GitHub Actions가 서명된 APK를 만들어 [Releases](https://github.com/team-carol/carol-live/releases)에 올림.
+앱은 최신 릴리스를 확인해서 새 버전이 있으면 화면 오른쪽 위에 **새 버전** 버튼을 띄움 (설정 → 앱 정보 → 업데이트 확인으로도 가능).
+설치할 때만 갤럭시 '보안 위험 자동 차단'을 잠깐 꺼야 함.
+
+```bash
+git tag v0.3.1 && git push origin v0.3.1
+```
+
+### 서명 키 (처음 한 번)
+
+업데이트가 덮어써지려면 항상 같은 키로 서명해야 함. 키는 레포에 올리지 않음(`.gitignore`).
+
+```powershell
+cd android
+keytool -genkeypair -v -keystore release.jks -storetype PKCS12 -alias carol-live -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=carol live, O=team carol"
+# 비밀번호를 물어보면 하나 정해서 두 번 입력
+
+# 로컬에서 release 빌드할 때 쓰는 파일 (gitignore 됨)
+@"
+storeFile=release.jks
+storePassword=<비밀번호>
+keyAlias=carol-live
+keyPassword=<비밀번호>
+"@ | Set-Content keystore.properties
+
+# GitHub Secret에 넣을 값을 클립보드로 복사
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("release.jks")) | Set-Clipboard
+```
+
+GitHub 레포 → Settings → Secrets and variables → Actions → New repository secret:
+
+| 이름 | 값 |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | 위에서 클립보드로 복사한 값 |
+| `ANDROID_KEYSTORE_PASSWORD` | 비밀번호 |
+| `ANDROID_KEY_ALIAS` | `carol-live` |
+| `ANDROID_KEY_PASSWORD` | 비밀번호 (PKCS12라 같은 값) |
+
+`release.jks`와 비밀번호는 잃어버리면 기존 설치본 위에 업데이트를 못 하니 따로 백업해둘 것.
+
 ## server + web 배포
 
 처음 한 번:

@@ -82,6 +82,21 @@ class SettingsActivity : AppCompatActivity() {
     upAuto.setOnCheckedChangeListener { _, _ -> saveUploadPrefs() }
     upMobile.setOnCheckedChangeListener { _, _ -> saveUploadPrefs() }
     upPair.setOnClickListener { startPairing() }
+    findViewById<TextView>(R.id.txt_version).text = "현재 버전 v${Updates.currentVersion}"
+    findViewById<Button>(R.id.btn_check_update).setOnClickListener { button ->
+      button.isEnabled = false
+      Updates.check(this, force = true) { result ->
+        button.isEnabled = true
+        result
+          .onSuccess { release ->
+            if (release != null) UpdateDialog.show(this, release)
+            else android.widget.Toast.makeText(this, "최신 버전임", android.widget.Toast.LENGTH_SHORT).show()
+          }
+          .onFailure {
+            android.widget.Toast.makeText(this, "확인 실패: ${it.message}", android.widget.Toast.LENGTH_SHORT).show()
+          }
+      }
+    }
     upUnpair.setOnClickListener {
       UploadConfig.disconnect(this)
       renderUpload()

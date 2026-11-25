@@ -49,6 +49,8 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
   private lateinit var btnSettings: Button
   private lateinit var btnMute: Button
   private lateinit var btnRecord: Button
+  private lateinit var btnUpdate: Button
+  private var newRelease: Updates.Release? = null
 
   private var surfaceReady = false
   private val session = LiveSession
@@ -125,6 +127,11 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     super.onStart()
     session.listener = this
     render()
+    Updates.check(this, force = false) { result ->
+      newRelease = result.getOrNull()
+      btnUpdate.visibility = if (newRelease != null) View.VISIBLE else View.GONE
+      newRelease?.let { btnUpdate.text = "새 버전 ${it.tag}" }
+    }
   }
 
   override fun onResume() {
@@ -182,6 +189,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     btnSettings = findViewById(R.id.btn_settings)
     btnMute = findViewById(R.id.btn_mute)
     btnRecord = findViewById(R.id.btn_record)
+    btnUpdate = findViewById(R.id.btn_update)
   }
 
   private fun goFullscreen() {
@@ -208,6 +216,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
       }
     }
     btnSettings.setOnClickListener { openSettings() }
+    btnUpdate.setOnClickListener { newRelease?.let { UpdateDialog.show(this, it) } }
     btnRecord.setOnClickListener { session.toggleRecording() }
     btnMute.setOnClickListener { session.toggleMute() }
     findViewById<Button>(R.id.btn_ev_down).setOnClickListener {

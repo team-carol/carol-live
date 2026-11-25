@@ -352,6 +352,22 @@
           android:layout_marginTop="@dimen/crl_space_2" />
     </LinearLayout>
 
+    <!-- ===== 앱 정보 ===== -->
+    <LinearLayout style="@style/Crl.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+      <TextView style="@style/Crl.Text.CardTitle" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:text="앱 정보" />
+      <TextView android:id="@+id/txt_version" style="@style/Crl.Text.BodySm"
+          android:layout_width="wrap_content" android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3" />
+      <Button
+          android:id="@+id/btn_check_update"
+          style="@style/Crl.Button.Secondary"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_4"
+          android:text="업데이트 확인" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/btn_save"
         style="@style/Crl.Button.Primary.Large"

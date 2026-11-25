@@ -7,6 +7,10 @@
 /android/app/build
 /android/.kotlin
 /android/RootEncoder/
+# release signing: never commit
+/android/keystore.properties
+*.jks
+*.keystore
 # node
 node_modules
 /web/dist
