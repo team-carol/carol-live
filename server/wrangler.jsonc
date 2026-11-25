@@ -13,13 +13,12 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/auth/*"]
   },
-  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "carol-live-recordings" }],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "carol-live" }],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "carol-live",
-      // `npx wrangler d1 create carol-live` prints the real id; paste it here
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "3333ce2c-3ce5-4571-a5f9-632cc7751663",
       "migrations_dir": "migrations"
     }
   ],
