@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- live dot with broadcast waves, kept inside the 66dp adaptive-icon safe zone -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <path
+      android:fillColor="@color/crl_accent"
+      android:pathData="M54,45a9,9 0,1 1,0,18a9,9 0,1 1,0,-18z" />
+  <path
+      android:strokeColor="@color/crl_ink"
+      android:strokeWidth="5"
+      android:strokeLineCap="round"
+      android:pathData="M40,40 A20,20 0 0 0 40,68 M68,40 A20,20 0 0 1 68,68" />
+  <path
+      android:strokeColor="@color/crl_ink"
+      android:strokeAlpha="0.6"
+      android:strokeWidth="5"
+      android:strokeLineCap="round"
+      android:pathData="M32,32 A31,31 0 0 0 32,76 M76,32 A31,31 0 0 1 76,76" />
+</vector>

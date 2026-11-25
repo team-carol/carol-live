@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+  <!-- Carol is dark-only: canvas background, coral accent, Pretendard -->
+  <style name="Theme.RoenaLive" parent="Theme.AppCompat.NoActionBar">
+    <item name="colorPrimary">@color/crl_canvas</item>
+    <item name="colorPrimaryDark">@color/crl_canvas</item>
+    <item name="colorAccent">@color/crl_accent</item>
+    <item name="colorControlNormal">@color/crl_dim</item>
+    <item name="colorControlActivated">@color/crl_accent</item>
+    <item name="colorControlHighlight">@color/crl_surface_hover</item>
+    <item name="android:colorBackground">@color/crl_canvas</item>
+    <item name="android:windowBackground">@color/crl_canvas</item>
+    <item name="android:statusBarColor">@color/crl_canvas</item>
+    <item name="android:navigationBarColor">@color/crl_canvas</item>
+    <item name="android:textColorPrimary">@color/crl_ink</item>
+    <item name="android:textColorSecondary">@color/crl_muted</item>
+    <item name="android:textColorHint">@color/crl_faint</item>
+    <item name="android:fontFamily">@font/pretendard</item>
+    <item name="fontFamily">@font/pretendard</item>
+    <item name="alertDialogTheme">@style/ThemeOverlay.RoenaLive.Dialog</item>
+  </style>
+
+  <style name="Theme.RoenaLive.Settings" />
+
+  <style name="Theme.RoenaLive.Fullscreen">
+    <item name="android:windowBackground">@android:color/black</item>
+    <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+  </style>
+
+  <style name="ThemeOverlay.RoenaLive.Dialog" parent="ThemeOverlay.AppCompat.Dialog.Alert">
+    <item name="android:windowBackground">@drawable/crl_dialog</item>
+    <item name="colorAccent">@color/crl_accent_soft</item>
+    <item name="android:textColorPrimary">@color/crl_ink</item>
+    <item name="android:textColorSecondary">@color/crl_muted</item>
+    <item name="android:fontFamily">@font/pretendard</item>
+  </style>
+
+  <!-- ===================== text (crl-* typography) ===================== -->
+
+  <style name="Crl.Text" parent="">
+    <item name="android:fontFamily">@font/pretendard</item>
+    <item name="android:textColor">@color/crl_ink_soft</item>
+    <item name="android:textSize">@dimen/crl_type_body</item>
+  </style>
+
+  <!-- crl-heading-2: page title, weight 500 (Carol keeps headings unbolded) -->
+  <style name="Crl.Text.Heading2">
+    <item name="android:textColor">@color/crl_ink</item>
+    <item name="android:textSize">@dimen/crl_type_heading_2</item>
+    <item name="android:textFontWeight">500</item>
+    <item name="android:letterSpacing">-0.02</item>
+  </style>
+
+  <!-- crl-card__title -->
+  <style name="Crl.Text.CardTitle">
+    <item name="android:textColor">@color/crl_ink</item>
+    <item name="android:textSize">@dimen/crl_type_heading_4</item>
+    <item name="android:textFontWeight">500</item>
+  </style>
+
+  <!-- crl-body-sm / card body -->
+  <style name="Crl.Text.BodySm">
+    <item name="android:textColor">@color/crl_muted</item>
+    <item name="android:textSize">@dimen/crl_type_body_sm</item>
+    <item name="android:lineSpacingMultiplier">1.15</item>
+  </style>
+
+  <!-- crl-label -->
+  <style name="Crl.Text.Label">
+    <item name="android:textColor">@color/crl_muted</item>
+    <item name="android:textSize">@dimen/crl_type_caption</item>
+    <item name="android:textFontWeight">500</item>
+  </style>
+
+  <!-- crl-caption -->
+  <style name="Crl.Text.Caption">
+    <item name="android:textColor">@color/crl_muted</item>
+    <item name="android:textSize">@dimen/crl_type_caption</item>
+  </style>
+
+  <!-- crl-helper -->
+  <style name="Crl.Text.Helper">
+    <item name="android:textColor">@color/crl_dim</item>
+    <item name="android:textSize">@dimen/crl_type_helper</item>
+  </style>
+
+  <!-- crl-stat__label / crl-stat__value -->
+  <style name="Crl.Text.StatLabel">
+    <item name="android:textColor">@color/crl_dim</item>
+    <item name="android:textSize">@dimen/crl_type_helper</item>
+    <item name="android:textFontWeight">500</item>
+  </style>
+
+  <style name="Crl.Text.StatValue">
+    <item name="android:textColor">@color/crl_ink</item>
+    <item name="android:textSize">@dimen/crl_type_stat</item>
+    <item name="android:textFontWeight">500</item>
+    <item name="android:fontFeatureSettings">tnum</item>
+  </style>
+
+  <!-- crl-tag: pill badge, 11 bold. Large variant is project-only, for reading at arm's length -->
+  <style name="Crl.Tag" parent="">
+    <item name="android:fontFamily">@font/pretendard</item>
+    <item name="android:textSize">@dimen/crl_type_tag</item>
+    <item name="android:textFontWeight">700</item>
+    <item name="android:textColor">@color/crl_muted</item>
+    <item name="android:background">@drawable/crl_tag_neutral</item>
+    <item name="android:paddingStart">9dp</item>
+    <item name="android:paddingEnd">9dp</item>
+    <item name="android:paddingTop">@dimen/crl_space_1</item>
+    <item name="android:paddingBottom">@dimen/crl_space_1</item>
+    <item name="android:fontFeatureSettings">tnum</item>
+  </style>
+
+  <style name="Crl.Tag.Large">
+    <item name="android:textSize">@dimen/crl_type_label</item>
+    <item name="android:paddingStart">@dimen/crl_space_4</item>
+    <item name="android:paddingEnd">@dimen/crl_space_4</item>
+    <item name="android:paddingTop">@dimen/crl_space_2</item>
+    <item name="android:paddingBottom">@dimen/crl_space_2</item>
+  </style>
+
+  <!-- ===================== controls ===================== -->
+
+  <!-- crl-btn (md): 10/20 padding, 15 medium, radius 12 -->
+  <style name="Crl.Button" parent="Widget.AppCompat.Button.Borderless">
+    <item name="android:fontFamily">@font/pretendard</item>
+    <item name="android:textSize">@dimen/crl_type_body_sm</item>
+    <item name="android:textFontWeight">500</item>
+    <item name="android:textAllCaps">false</item>
+    <item name="android:minWidth">0dp</item>
+    <item name="android:minHeight">0dp</item>
+    <item name="android:paddingStart">@dimen/crl_space_6</item>
+    <item name="android:paddingEnd">@dimen/crl_space_6</item>
+    <item name="android:paddingTop">10dp</item>
+    <item name="android:paddingBottom">10dp</item>
+    <item name="android:stateListAnimator">@null</item>
+    <item name="android:gravity">center</item>
+  </style>
+
+  <style name="Crl.Button.Primary">
+    <item name="android:background">@drawable/crl_btn_primary</item>
+    <item name="android:textColor">@color/crl_accent_ink</item>
+  </style>
+
+  <style name="Crl.Button.Secondary">
+    <item name="android:background">@drawable/crl_btn_secondary</item>
+    <item name="android:textColor">@color/crl_ink_2</item>
+  </style>
+
+  <!-- crl-btn-sm: 7/14, 14 -->
+  <style name="Crl.Button.Secondary.Small">
+    <item name="android:textSize">@dimen/crl_type_label</item>
+    <item name="android:paddingStart">14dp</item>
+    <item name="android:paddingEnd">14dp</item>
+    <item name="android:paddingTop">7dp</item>
+    <item name="android:paddingBottom">7dp</item>
+  </style>
+
+  <!-- crl-btn-lg: 12/24, 16 -->
+  <style name="Crl.Button.Primary.Large">
+    <item name="android:textSize">@dimen/crl_type_body</item>
+    <item name="android:paddingStart">@dimen/crl_space_7</item>
+    <item name="android:paddingEnd">@dimen/crl_space_7</item>
+    <item name="android:paddingTop">@dimen/crl_space_4</item>
+    <item name="android:paddingBottom">@dimen/crl_space_4</item>
+  </style>
+
+  <!-- crl-input -->
+  <style name="Crl.Input" parent="Widget.AppCompat.EditText">
+    <item name="android:fontFamily">@font/pretendard</item>
+    <item name="android:background">@drawable/crl_input</item>
+    <item name="android:textColor">@color/crl_ink</item>
+    <item name="android:textColorHint">@color/crl_faint</item>
+    <item name="android:textSize">@dimen/crl_type_label</item>
+    <item name="android:paddingStart">@dimen/crl_space_4</item>
+    <item name="android:paddingEnd">@dimen/crl_space_4</item>
+    <item name="android:paddingTop">9dp</item>
+    <item name="android:paddingBottom">9dp</item>
+    <item name="android:minHeight">44dp</item>
+    <item name="android:singleLine">true</item>
+  </style>
+
+  <!-- crl-tabs-contained > crl-tab, used as a segmented radio group -->
+  <style name="Crl.Tabs" parent="">
+    <item name="android:background">@drawable/crl_tabs_contained</item>
+    <item name="android:padding">@dimen/crl_space_2</item>
+    <item name="android:orientation">horizontal</item>
+  </style>
+
+  <style name="Crl.Tab" parent="">
+    <item name="android:button">@null</item>
+    <item name="android:background">@drawable/crl_tab</item>
+    <item name="android:textColor">@color/crl_tab_text</item>
+    <item name="android:fontFamily">@font/pretendard</item>
+    <item name="android:textSize">@dimen/crl_type_label</item>
+    <item name="android:textFontWeight">500</item>
+    <item name="android:gravity">center</item>
+    <item name="android:paddingStart">18dp</item>
+    <item name="android:paddingEnd">18dp</item>
+    <item name="android:paddingTop">@dimen/crl_space_3</item>
+    <item name="android:paddingBottom">@dimen/crl_space_3</item>
+    <item name="android:layout_marginEnd">@dimen/crl_space_2</item>
+  </style>
+
+  <style name="Crl.Switch" parent="Widget.AppCompat.CompoundButton.Switch">
+    <item name="android:fontFamily">@font/pretendard</item>
+    <item name="android:textColor">@color/crl_ink_soft</item>
+    <item name="android:textSize">@dimen/crl_type_label</item>
+    <item name="android:minHeight">44dp</item>
+    <item name="trackTint">@color/crl_switch_track</item>
+    <item name="thumbTint">@color/crl_switch_thumb</item>
+  </style>
+
+  <!-- crl-card -->
+  <style name="Crl.Card" parent="">
+    <item name="android:background">@drawable/crl_card</item>
+    <item name="android:orientation">vertical</item>
+    <item name="android:padding">@dimen/crl_space_6</item>
+    <item name="android:layout_marginTop">@dimen/crl_space_4</item>
+  </style>
+</resources>

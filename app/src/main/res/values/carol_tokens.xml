@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Carol Design System tokens, mirrored from
+  team-carol/carol-design-system packages/design-system/src/tokens/{color,layout,typography}.ts
+  This file is the only place hex values live. Everything else references @color/crl_*.
+  If a value looks wrong, fix it in carol-design-system first, then sync here.
+-->
+<resources>
+  <!-- background -->
+  <color name="crl_canvas">#1A1A1C</color>
+  <color name="crl_canvas_alt">#211F24</color>
+  <color name="crl_surface">#242427</color>
+  <color name="crl_surface_2">#2E2E33</color>
+  <color name="crl_surface_hover">#332E36</color>
+
+  <!-- border -->
+  <color name="crl_border">#33333A</color>
+  <color name="crl_border_strong">#3A353D</color>
+
+  <!-- text -->
+  <color name="crl_ink">#F2EDEF</color>
+  <color name="crl_ink_2">#E8DFE3</color>
+  <color name="crl_ink_soft">#CFC6CA</color>
+  <color name="crl_muted">#B3A8AD</color>
+  <color name="crl_dim">#8A8087</color>
+  <color name="crl_faint">#6F676C</color>
+
+  <!-- accent -->
+  <color name="crl_accent">#FF9294</color>
+  <color name="crl_accent_hover">#F2787B</color>
+  <color name="crl_accent_ink">#3A1E1E</color>
+  <color name="crl_accent_soft">#F2B3BF</color>
+
+  <!-- status -->
+  <color name="crl_success">#80D8A3</color>
+  <color name="crl_success_bg">#263D32</color>
+  <color name="crl_success_border">#3E6852</color>
+  <color name="crl_danger">#FF9A9A</color>
+  <color name="crl_danger_bg">#432B2E</color>
+  <color name="crl_danger_border">#734548</color>
+  <color name="crl_warning">#F5C97A</color>
+  <color name="crl_warning_bg">#41382A</color>
+  <color name="crl_warning_border">#6E5C3A</color>
+
+  <color name="crl_focus">#3898EC</color>
+
+  <!-- withAlpha(canvas, 0.82): translucent panel over the camera preview -->
+  <color name="crl_canvas_a82">#D11A1A1C</color>
+
+  <!-- radius -->
+  <dimen name="crl_radius_inline">6dp</dimen>
+  <dimen name="crl_radius_small">8dp</dimen>
+  <dimen name="crl_radius_control">10dp</dimen>
+  <dimen name="crl_radius_button">12dp</dimen>
+  <dimen name="crl_radius_tabs">14dp</dimen>
+  <dimen name="crl_radius_card">16dp</dimen>
+  <dimen name="crl_radius_pill">999dp</dimen>
+
+  <!-- spacing (4px base) -->
+  <dimen name="crl_space_1">2dp</dimen>
+  <dimen name="crl_space_2">4dp</dimen>
+  <dimen name="crl_space_3">8dp</dimen>
+  <dimen name="crl_space_4">12dp</dimen>
+  <dimen name="crl_space_5">16dp</dimen>
+  <dimen name="crl_space_6">20dp</dimen>
+  <dimen name="crl_space_7">24dp</dimen>
+  <dimen name="crl_space_9">32dp</dimen>
+
+  <!-- type scale (app-sized: fixed values of the clamp() ranges) -->
+  <dimen name="crl_type_heading_2">28sp</dimen>
+  <dimen name="crl_type_heading_4">22sp</dimen>
+  <dimen name="crl_type_body">16sp</dimen>
+  <dimen name="crl_type_body_sm">15sp</dimen>
+  <dimen name="crl_type_label">14sp</dimen>
+  <dimen name="crl_type_caption">13sp</dimen>
+  <dimen name="crl_type_helper">12sp</dimen>
+  <dimen name="crl_type_tag">11sp</dimen>
+  <dimen name="crl_type_stat">20sp</dimen>
+</resources>

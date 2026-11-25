@@ -1,0 +1,10 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+/build
+/app/build
+.kotlin
+.DS_Store
+# local clone of RootEncoder (see README)
+/RootEncoder/
