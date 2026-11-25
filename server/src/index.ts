@@ -8,7 +8,8 @@ export interface Env {
   ASSETS: Fetcher;
   DISCORD_CLIENT_ID: string;
   DISCORD_CLIENT_SECRET: string;
-  ALLOWED_DISCORD_IDS: string;
+  /** secret: comma separated Discord user ids that may log in */
+  ALLOWED_DISCORD_IDS?: string;
   STORAGE_CAP_BYTES: string;
   /** "1" enables /auth/dev for local testing. never set in production */
   DEV_LOGIN?: string;
@@ -110,7 +111,7 @@ async function upsertUser(env: Env, user: User) {
 }
 
 function allowed(env: Env, discordId: string): boolean {
-  return env.ALLOWED_DISCORD_IDS.split(",").map((s) => s.trim()).filter(Boolean).includes(discordId);
+  return (env.ALLOWED_DISCORD_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean).includes(discordId);
 }
 
 interface PairRequest {
