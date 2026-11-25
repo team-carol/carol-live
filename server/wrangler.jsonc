@@ -13,19 +13,18 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/auth/*"]
   },
-  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "carol-live-recordings" }],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "carol-live" }],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "carol-live",
-      // `npx wrangler d1 create carol-live` prints the real id; paste it here
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "3333ce2c-3ce5-4571-a5f9-632cc7751663",
       "migrations_dir": "migrations"
     }
   ],
   "vars": {
     // Discord application (https://discord.com/developers/applications) -> OAuth2 client id
-    "DISCORD_CLIENT_ID": "",
+    "DISCORD_CLIENT_ID": "1575043569956167792",
     // team-wide cap; oldest recordings are deleted to stay under it.
     // R2: first 10 GB free, then $0.015/GB-month -> 100 GB is about $1.35/month, egress is free
     "STORAGE_CAP_BYTES": "107374182400"

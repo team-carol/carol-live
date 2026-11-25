@@ -77,7 +77,10 @@ GitHub 레포 → Settings → Secrets and variables → Actions → New reposit
 주소는 `https://live.team-carol.com` (`wrangler.jsonc`의 `routes`). team-carol.com이 같은 Cloudflare 계정에 있어서
 배포하면 DNS·인증서가 자동으로 붙음. 이 주소 하나만 씀 (`workers_dev: false`).
 
-처음 한 번:
+Windows PowerShell에서 `npm`/`npx`가 "스크립트를 실행할 수 없으므로"로 막히면
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`를 한 번 하거나 `npm.cmd`/`npx.cmd`로 실행.
+
+처음 한 번 (R2 버킷 `carol-live`, D1 `carol-live`는 team carol 계정에 이미 있음. 새 계정에 세울 때만):
 
 1. [디스코드 개발자 포털](https://discord.com/developers/applications)에서 앱 만들기
    → OAuth2 → Redirects에 `https://live.team-carol.com/auth/callback` 추가 → Client ID / Client Secret 복사
@@ -86,9 +89,10 @@ GitHub 레포 → Settings → Secrets and variables → Actions → New reposit
    ```bash
    cd server && npm install
    npx wrangler login
-   npx wrangler r2 bucket create carol-live-recordings
+   npx wrangler r2 bucket create carol-live
    npx wrangler d1 create carol-live        # 나온 database_id를 wrangler.jsonc에 붙여넣기
    ```
+   `d1 create`가 "add it on your behalf?"라고 물으면 **no**. 바인딩 이름이 `DB`여야 해서 직접 붙여넣는 게 맞음
 4. `wrangler.jsonc` 채우기 (둘 다 비밀값 아님)
    - `database_id`
    - `vars.DISCORD_CLIENT_ID`
