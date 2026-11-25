@@ -81,6 +81,8 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 
 - `android/keystore.properties`, `*.jks`, `server/.dev.vars`는 절대 커밋하지 않음 (`.gitignore`에 있음)
 - `DEV_LOGIN=1`은 로컬 전용. `wrangler.jsonc` vars나 운영 secret에 넣지 않음
+- 운영 주소는 `https://live.team-carol.com` 하나 (`workers_dev: false`). OAuth redirect와 페어링 주소가 요청 origin에서 만들어지기 때문
+- `DISCORD_CLIENT_SECRET`, `ALLOWED_DISCORD_IDS`(팀원 디스코드 ID)는 `wrangler secret`으로만 넣음. 공개 레포라 `wrangler.jsonc`에 쓰지 않음
 - 유튜브 스트림 키는 폰 앱 설정에만 저장됨. 코드·로그·이슈에 남기지 않음
 - 기기 토큰은 서버에 sha256 해시로만 저장. 페어링은 앱이 만든 nonce가 돌아와야만 받아들임
 - 웹 API는 항상 로그인한 사용자 본인의 녹화만 돌려줌 (`user_id` 조건 빠뜨리지 않기)

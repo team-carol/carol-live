@@ -3,6 +3,9 @@
   "name": "carol-live",
   "main": "src/index.ts",
   "compatibility_date": "2025-10-01",
+  // one public origin only: Discord redirect and app pairing are built from the request origin
+  "routes": [{ "pattern": "live.team-carol.com", "custom_domain": true }],
+  "workers_dev": false,
   // web/dist is served as a single-page app; /api and /auth go to the worker first
   "assets": {
     "directory": "../web/dist",
@@ -23,11 +26,11 @@
   "vars": {
     // Discord application (https://discord.com/developers/applications) -> OAuth2 client id
     "DISCORD_CLIENT_ID": "",
-    // comma separated Discord user ids that may log in (team carol members)
-    "ALLOWED_DISCORD_IDS": "",
     // team-wide cap; oldest recordings are deleted to stay under it.
     // R2: first 10 GB free, then $0.015/GB-month -> 100 GB is about $1.35/month, egress is free
     "STORAGE_CAP_BYTES": "107374182400"
   }
-  // secret: `npx wrangler secret put DISCORD_CLIENT_SECRET`
+  // secrets (kept out of this public repo):
+  //   npx wrangler secret put DISCORD_CLIENT_SECRET
+  //   npx wrangler secret put ALLOWED_DISCORD_IDS   comma separated Discord user ids that may log in
 }

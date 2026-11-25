@@ -74,24 +74,25 @@ GitHub 레포 → Settings → Secrets and variables → Actions → New reposit
 
 ## server + web 배포
 
+주소는 `https://live.team-carol.com` (`wrangler.jsonc`의 `routes`). team-carol.com이 같은 Cloudflare 계정에 있어서
+배포하면 DNS·인증서가 자동으로 붙음. 이 주소 하나만 씀 (`workers_dev: false`).
+
 처음 한 번:
 
 1. [디스코드 개발자 포털](https://discord.com/developers/applications)에서 앱 만들기
-   → OAuth2 → Redirects에 `https://<워커 주소>/auth/callback` 추가 → Client ID / Secret 복사
-2. Cloudflare 대시보드에서 R2 사용 설정 (무료 10GB, 결제 수단 등록이 필요할 수 있음)
+   → OAuth2 → Redirects에 `https://live.team-carol.com/auth/callback` 추가 → Client ID / Client Secret 복사
+2. Cloudflare 대시보드 → R2 → 사용 설정 (무료 10GB, 결제 수단 등록이 필요할 수 있음)
 3. 리소스 만들기
    ```bash
    cd server && npm install
    npx wrangler login
    npx wrangler r2 bucket create carol-live-recordings
    npx wrangler d1 create carol-live        # 나온 database_id를 wrangler.jsonc에 붙여넣기
-   npx wrangler secret put DISCORD_CLIENT_SECRET
    ```
-4. `wrangler.jsonc`의 `vars` 채우기
-   - `DISCORD_CLIENT_ID`
-   - `ALLOWED_DISCORD_IDS`: 로그인 허용할 팀원 디스코드 ID, 쉼표로 구분
-     (디스코드 설정 → 고급 → 개발자 모드 켜고 프로필 우클릭 → ID 복사)
-   - `STORAGE_CAP_BYTES`: 기본 100GB. 넘으면 팀 전체에서 가장 오래된 녹화부터 지움
+4. `wrangler.jsonc` 채우기 (둘 다 비밀값 아님)
+   - `database_id`
+   - `vars.DISCORD_CLIENT_ID`
+   - `vars.STORAGE_CAP_BYTES`: 기본 100GB. 넘으면 팀 전체에서 가장 오래된 녹화부터 지움
      (R2는 10GB까지 무료, 그 뒤 GB당 월 $0.015라 100GB를 꽉 채워도 월 약 $1.35. 다운로드 트래픽은 무료)
 5. DB 테이블 만들고 배포
    ```bash
@@ -99,6 +100,12 @@ GitHub 레포 → Settings → Secrets and variables → Actions → New reposit
    (cd ../web && npm install)
    npm run deploy          # web을 빌드해서 워커의 정적 파일로 같이 올림
    ```
+6. 비밀값 넣기 (레포에 안 올라감)
+   ```bash
+   npx wrangler secret put DISCORD_CLIENT_SECRET
+   npx wrangler secret put ALLOWED_DISCORD_IDS     # 로그인 허용할 팀원 디스코드 ID, 쉼표로 구분
+   ```
+   디스코드 ID: 디스코드 설정 → 고급 → 개발자 모드 켜기 → 프로필 우클릭 → 사용자 ID 복사
 
 이후 배포는 `cd server && npm run deploy`만 하면 됨.
 
