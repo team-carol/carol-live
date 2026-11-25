@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <!-- keep streaming with the screen off / app in background -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+  <!-- long uploads run as a WorkManager foreground job -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+  <uses-feature android:name="android.hardware.camera" android:required="true" />
+
+  <application
+      android:allowBackup="false"
+      android:requestLegacyExternalStorage="true"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher"
+      android:label="@string/app_name"
+      android:supportsRtl="true"
+      android:theme="@style/Theme.CarolLive">
+
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:launchMode="singleTop"
+        android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+        android:theme="@style/Theme.CarolLive.Fullscreen">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+
+    <activity
+        android:name=".SettingsActivity"
+        android:exported="false"
+        android:label="@string/settings_title"
+        android:windowSoftInputMode="adjustResize"
+        android:theme="@style/Theme.CarolLive.Settings" />
+
+    <activity
+        android:name=".SummaryActivity"
+        android:exported="false"
+        android:theme="@style/Theme.CarolLive.Settings" />
+
+    <!-- browser hands the device token back here after Discord login -->
+    <activity
+        android:name=".PairActivity"
+        android:exported="true"
+        android:launchMode="singleTask"
+        android:theme="@style/Theme.CarolLive.Settings">
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="carollive" android:host="paired" />
+      </intent-filter>
+    </activity>
+
+    <service
+        android:name=".LiveService"
+        android:exported="false"
+        android:foregroundServiceType="camera|microphone" />
+
+    <service
+        android:name="androidx.work.impl.foreground.SystemForegroundService"
+        android:foregroundServiceType="dataSync"
+        tools:node="merge" />
+  </application>
+</manifest>

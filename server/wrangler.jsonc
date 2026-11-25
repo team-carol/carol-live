@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "carol-live",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-10-01",
+  // web/dist is served as a single-page app; /api and /auth go to the worker first
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/auth/*"]
+  },
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "carol-live-recordings" }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "carol-live",
+      // `npx wrangler d1 create carol-live` prints the real id; paste it here
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Discord application (https://discord.com/developers/applications) -> OAuth2 client id
+    "DISCORD_CLIENT_ID": "",
+    // comma separated Discord user ids that may log in (team carol members)
+    "ALLOWED_DISCORD_IDS": "",
+    // R2 free tier is 10 GB; oldest recordings (team-wide) are deleted to stay under this
+    "STORAGE_CAP_BYTES": "10737418240"
+  }
+  // secret: `npx wrangler secret put DISCORD_CLIENT_SECRET`
+}
