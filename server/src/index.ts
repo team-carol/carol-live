@@ -72,7 +72,7 @@ function keyPart(text: string): string {
 
 function storageCap(env: Env): number {
   const n = Number(env.STORAGE_CAP_BYTES);
-  return Number.isFinite(n) && n > 0 ? n : 10 * 1024 ** 3;
+  return Number.isFinite(n) && n > 0 ? n : 100 * 1024 ** 3;
 }
 
 async function createSession(c: Ctx, user: User) {

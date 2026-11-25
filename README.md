@@ -49,7 +49,8 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
    - `DISCORD_CLIENT_ID`
    - `ALLOWED_DISCORD_IDS`: 로그인 허용할 팀원 디스코드 ID, 쉼표로 구분
      (디스코드 설정 → 고급 → 개발자 모드 켜고 프로필 우클릭 → ID 복사)
-   - `STORAGE_CAP_BYTES`: 기본 10GB. 넘으면 팀 전체에서 가장 오래된 녹화부터 지움
+   - `STORAGE_CAP_BYTES`: 기본 100GB. 넘으면 팀 전체에서 가장 오래된 녹화부터 지움
+     (R2는 10GB까지 무료, 그 뒤 GB당 월 $0.015라 100GB를 꽉 채워도 월 약 $1.35. 다운로드 트래픽은 무료)
 5. DB 테이블 만들고 배포
    ```bash
    npm run db:migrate:remote
