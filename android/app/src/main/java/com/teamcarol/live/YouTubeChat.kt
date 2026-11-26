@@ -10,7 +10,7 @@ import java.util.concurrent.Executors
 
 /**
  * Live chat of the running YouTube broadcast, read through the carol-live server
- * (/api/device/youtube/*, the API key lives there).
+ * (/api/device/youtube/live and /chat; the API key lives there).
  *
  * Polls only while a stream runs AND the live screen is visible: the team shares one daily quota
  * and every chat poll costs 5 units, so nothing is fetched with the screen off. Polling slows down
