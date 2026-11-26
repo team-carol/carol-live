@@ -27,6 +27,7 @@ class SettingsActivity : AppCompatActivity() {
   private lateinit var rgMicMode: RadioGroup
   private lateinit var swLockFps: SwitchCompat
   private lateinit var swStereo: SwitchCompat
+  private lateinit var rgClickLimiter: RadioGroup
   private lateinit var swPreferUsb: SwitchCompat
   private lateinit var swAutoRecord: SwitchCompat
   private lateinit var rgRecordQuality: RadioGroup
@@ -63,6 +64,7 @@ class SettingsActivity : AppCompatActivity() {
     rgMicMode = findViewById(R.id.rg_mic_mode)
     swLockFps = findViewById(R.id.sw_lock_fps)
     swStereo = findViewById(R.id.sw_stereo)
+    rgClickLimiter = findViewById(R.id.rg_click_limiter)
     swPreferUsb = findViewById(R.id.sw_prefer_usb)
     swAutoRecord = findViewById(R.id.sw_auto_record)
     rgRecordQuality = findViewById(R.id.rg_record_quality)
@@ -202,6 +204,13 @@ class SettingsActivity : AppCompatActivity() {
     )
     swLockFps.isChecked = s.lockFps
     swStereo.isChecked = s.stereo
+    rgClickLimiter.check(
+      when (s.clickLimiter) {
+        ClickLimiter.Level.OFF -> R.id.cl_off
+        ClickLimiter.Level.LIGHT -> R.id.cl_light
+        ClickLimiter.Level.STRONG -> R.id.cl_strong
+      },
+    )
     swPreferUsb.isChecked = s.preferUsbMic
     swAutoRecord.isChecked = s.autoRecord
     rgRecordQuality.check(if (s.recordBitrateKbps > 0) R.id.rq_high else R.id.rq_same)
@@ -280,6 +289,11 @@ class SettingsActivity : AppCompatActivity() {
       },
       sampleRate = if (rgSampleRate.checkedRadioButtonId == R.id.sr_44) 44100 else 48000,
       stereo = swStereo.isChecked,
+      clickLimiter = when (rgClickLimiter.checkedRadioButtonId) {
+        R.id.cl_light -> ClickLimiter.Level.LIGHT
+        R.id.cl_strong -> ClickLimiter.Level.STRONG
+        else -> ClickLimiter.Level.OFF
+      },
       micMode = when (rgMicMode.checkedRadioButtonId) {
         R.id.mic_camcorder -> MicMode.CAMCORDER
         R.id.mic_default -> MicMode.DEFAULT

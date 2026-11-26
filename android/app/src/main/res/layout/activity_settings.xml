@@ -195,6 +195,23 @@
           android:layout_height="wrap_content"
           android:layout_marginTop="@dimen/crl_space_4"
           android:text="스테레오" />
+
+      <TextView style="@style/Crl.Text.Label" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_5"
+          android:text="버튼 소리 줄이기" />
+      <RadioGroup android:id="@+id/rg_click_limiter" style="@style/Crl.Tabs"
+          android:layout_width="wrap_content" android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3">
+        <RadioButton android:id="@+id/cl_off" style="@style/Crl.Tab"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="끔" />
+        <RadioButton android:id="@+id/cl_light" style="@style/Crl.Tab"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="약" />
+        <RadioButton android:id="@+id/cl_strong" style="@style/Crl.Tab"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="강" />
+      </RadioGroup>
+      <TextView style="@style/Crl.Text.Helper" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_3"
+          android:text="게임 소리보다 확 튀는 버튼 소리만 눌러주고 전체 볼륨을 올림. 방송과 녹화 둘 다 적용" />
     </LinearLayout>
 
     <!-- ===== 녹화 ===== -->
