@@ -136,7 +136,8 @@ API 키는 서버에만 있음.
 2. API 및 서비스 → 라이브러리 → **YouTube Data API v3** → 사용
 3. API 및 서비스 → 사용자 인증 정보 → 사용자 인증 정보 만들기 → **API 키**
    → 키 수정에서 API 제한사항을 "YouTube Data API v3"로 제한
-4. `cd server && npx wrangler secret put YOUTUBE_API_KEY`
+4. 서버 비밀값 `YOUTUBE_API_KEY`로 등록: Cloudflare 대시보드 → Workers 및 Pages → carol-live → 설정 → 변수 및 비밀 → 추가(유형: 비밀)
+   (터미널이면 `cd server && npx wrangler secret put YOUTUBE_API_KEY`)
 
 무료 할당량은 하루 10,000 단위(팀 전체 공유, 한국 시간 오후 4~5시 초기화). 채팅 한 번 불러올 때 5 단위라,
 앱은 화면이 켜져 있을 때만 6~12초 간격으로 불러옴 (채팅이 조용하면 느리게). 채팅이 활발하면 하루 약 3시간, 조용하면 약 6시간 분량.
