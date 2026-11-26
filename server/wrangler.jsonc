@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "carol-live",
+  // team carol Cloudflare account (not a secret; lets CI deploy with an API token)
+  "account_id": "d8f3a4e20e2530c25e7f9704754afbf4",
   "main": "src/index.ts",
   "compatibility_date": "2025-10-01",
   // one public origin only: Discord redirect and app pairing are built from the request origin

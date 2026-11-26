@@ -97,7 +97,8 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 
 ## 릴리스
 
-- main에 머지 → 노트북에서 `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml`이 서명된 APK를 GitHub Releases에 올림
+- main에 머지 → Actions의 Release를 `Run workflow`(버전 입력, 폰에서도 됨) 또는 `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml`이 서명된 APK를 GitHub Releases에 올림
+- 서버·웹은 main에 `server/`·`web/` 변경이 들어오면 `deploy.yml`이 D1 마이그레이션 + `wrangler deploy` (Secret `CLOUDFLARE_API_TOKEN`). 수동 배포는 필요 없음
 - 앱은 `releases/latest`의 첫 `.apk` 에셋을 새 버전으로 봄. 에셋 이름 패턴(`carol-live-vX.Y.Z.apk`)을 바꿔도 `.apk`로 끝나야 함
 - 서명 Secret 4개(`ANDROID_KEYSTORE_BASE64` 등)는 이미 등록돼 있음
 
