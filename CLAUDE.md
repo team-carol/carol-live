@@ -26,10 +26,12 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 | `PairActivity.kt` | `carollive://paired` 딥링크 처리, nonce 검증 |
 | `SummaryActivity.kt` / `SettingsActivity.kt` | 결과 요약 화면 / 설정 화면 |
 | `Updates.kt` / `UpdateDialog.kt` | GitHub 최신 릴리스 확인(6시간 간격), 새 버전 안내 |
+| `YouTubeChat.kt` | 방송 화면 유튜브 채팅. 서버 `/api/device/youtube/*`로 라이브 찾기·채팅 폴링. 화면이 보일 때만 돎 |
 
 ### server/src, web/src
 
 - `server/src/index.ts`: 모든 라우트. `/auth/*` (디스코드 OAuth, 기기 페어링), `/api/*` (웹, 세션 쿠키), `/api/device/*` (앱, 기기 토큰)
+- `server/src/youtube.ts`: YouTube Data API v3 프록시 (채널 핸들 → 라이브 영상 → liveChatId, 채팅 메시지 정리)
 - `server/src/pages.ts`: 페어링 완료/에러 HTML (carol.css 사용)
 - `server/migrations/`: D1 스키마
 - `web/src/lib/mp4trim.ts`: moov를 Range로 읽고 필요한 샘플 바이트만 받아 새 mp4를 씀 (재인코딩 없음)
@@ -82,7 +84,13 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 - `android/keystore.properties`, `*.jks`, `server/.dev.vars`는 절대 커밋하지 않음 (`.gitignore`에 있음)
 - `DEV_LOGIN=1`은 로컬 전용. `wrangler.jsonc` vars나 운영 secret에 넣지 않음
 - 운영 주소는 `https://live.team-carol.com` 하나 (`workers_dev: false`). OAuth redirect와 페어링 주소가 요청 origin에서 만들어지기 때문
-- `DISCORD_CLIENT_SECRET`, `ALLOWED_DISCORD_IDS`(팀원 디스코드 ID)는 `wrangler secret`으로만 넣음. 공개 레포라 `wrangler.jsonc`에 쓰지 않음
+- `DISCORD_CLIENT_SECRET`, `ALLOWED_DISCORD_IDS`(팀원 디스코드 ID), `YOUTUBE_API_KEY`는 `wrangler secret`으로만 넣음. 공개 레포라 `wrangler.jsonc`에 쓰지 않음. 유튜브 키를 앱에 넣지 않음
+
+### 유튜브 할당량
+
+- YouTube Data API는 하루 10,000 단위를 팀 전체가 같이 씀. 채팅 폴링 1번 = 5 단위, `search.list`는 하루 100번 제한
+- 그래서 채팅은 방송 중 + 앱 화면이 보일 때만 불러오고, 조용하면 12초 간격으로 늦춤. 폴링 간격을 줄이거나 화면 꺼진 상태에서 불러오게 바꾸지 않음
+- 라이브 찾기는 업로드 목록(2 단위)을 먼저 보고, `search.list`는 세 번에 한 번(`deep=1`)만 씀
 - 유튜브 스트림 키는 폰 앱 설정에만 저장됨. 코드·로그·이슈에 남기지 않음
 - 기기 토큰은 서버에 sha256 해시로만 저장. 페어링은 앱이 만든 nonce가 돌아와야만 받아들임
 - 웹 API는 항상 로그인한 사용자 본인의 녹화만 돌려줌 (`user_id` 조건 빠뜨리지 않기)

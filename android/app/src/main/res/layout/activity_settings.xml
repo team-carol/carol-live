@@ -313,6 +313,51 @@
           android:text="끄면 와이파이에서만 올림. 1시간 녹화는 4~9GB" />
     </LinearLayout>
 
+    <!-- ===== 유튜브 채팅 ===== -->
+    <LinearLayout style="@style/Crl.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:gravity="center_vertical"
+          android:orientation="horizontal">
+        <TextView style="@style/Crl.Text.CardTitle" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="유튜브 채팅" />
+        <TextView android:id="@+id/yt_tag" style="@style/Crl.Tag" android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/crl_tag_warning"
+            android:textColor="@color/crl_warning"
+            android:text="서버 연결 필요"
+            android:visibility="gone" />
+      </LinearLayout>
+
+      <TextView style="@style/Crl.Text.Label" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_5"
+          android:text="채널" />
+      <EditText
+          android:id="@+id/yt_channel"
+          style="@style/Crl.Input"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3"
+          android:hint="\@핸들 또는 채널 주소"
+          android:importantForAutofill="no"
+          android:inputType="textUri" />
+      <TextView style="@style/Crl.Text.Helper" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_3"
+          android:text="방송을 시작하면 이 채널의 라이브를 찾아서 채팅을 띄움. 업로드 서버 연결이 필요함" />
+
+      <androidx.appcompat.widget.SwitchCompat
+          android:id="@+id/sw_show_chat"
+          style="@style/Crl.Switch"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_4"
+          android:text="방송 화면에 채팅 표시" />
+      <TextView style="@style/Crl.Text.Helper" android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="이 폰 화면에만 보이고 방송 영상에는 안 들어감. 화면이 꺼져 있을 땐 안 불러옴" />
+    </LinearLayout>
+
     <!-- ===== 마이크 ===== -->
     <LinearLayout style="@style/Crl.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
       <TextView style="@style/Crl.Text.CardTitle" android:layout_width="wrap_content"
