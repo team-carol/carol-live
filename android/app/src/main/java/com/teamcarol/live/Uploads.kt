@@ -232,7 +232,7 @@ object Uploads {
 
 class HttpError(val code: Int, message: String) : IOException(message)
 
-private object Api {
+internal object Api {
   fun request(paired: UploadConfig.Paired, method: String, path: String, json: JSONObject? = null): JSONObject {
     val conn = open(paired, method, path)
     if (json != null) {

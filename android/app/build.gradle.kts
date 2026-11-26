@@ -21,8 +21,8 @@ fun signingValue(env: String, prop: String): String? =
 val releaseStoreFile = signingValue("ANDROID_KEYSTORE_FILE", "storeFile")?.let { rootProject.file(it) }
 
 // CI passes -PappVersionName=0.3.1 -PappVersionCode=<run number>
-val appVersionName = providers.gradleProperty("appVersionName").orNull ?: "0.3.1"
-val appVersionCode = providers.gradleProperty("appVersionCode").orNull?.toIntOrNull() ?: 4
+val appVersionName = providers.gradleProperty("appVersionName").orNull ?: "0.4.0"
+val appVersionCode = providers.gradleProperty("appVersionCode").orNull?.toIntOrNull() ?: 5
 
 android {
   namespace = "com.teamcarol.live"

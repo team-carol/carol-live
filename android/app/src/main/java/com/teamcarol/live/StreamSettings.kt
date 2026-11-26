@@ -38,6 +38,11 @@ data class StreamSettings(
   val autoRecord: Boolean = true,
   /** 0 = record the same encoded video that is streamed (one encoder). >0 = separate, higher-bitrate encoder */
   val recordBitrateKbps: Int = 0,
+  /** "@handle" (or channel URL / UC id) whose live chat is shown on the live screen */
+  val youtubeChannel: String = "",
+  val showChat: Boolean = true,
+  /** presses button clicks in the mic signal before encoding (stream and recording) */
+  val clickLimiter: ClickLimiter.Level = ClickLimiter.Level.OFF,
 ) {
   val hasKey: Boolean get() = streamKey.isNotBlank()
 
@@ -82,6 +87,9 @@ object SettingsStore {
       lockFps = p.getBoolean("lockFps", d.lockFps),
       autoRecord = p.getBoolean("autoRecord", d.autoRecord),
       recordBitrateKbps = p.getInt("recordBitrateKbps", d.recordBitrateKbps),
+      youtubeChannel = p.getString("youtubeChannel", null) ?: d.youtubeChannel,
+      showChat = p.getBoolean("showChat", d.showChat),
+      clickLimiter = ClickLimiter.Level.of(p.getString("clickLimiter", null)),
     )
   }
 
@@ -101,6 +109,9 @@ object SettingsStore {
       .putBoolean("lockFps", s.lockFps)
       .putBoolean("autoRecord", s.autoRecord)
       .putInt("recordBitrateKbps", s.recordBitrateKbps)
+      .putString("youtubeChannel", s.youtubeChannel)
+      .putBoolean("showChat", s.showChat)
+      .putString("clickLimiter", s.clickLimiter.name)
       .apply()
   }
 

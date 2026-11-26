@@ -17,3 +17,6 @@ node_modules
 /server/.wrangler
 /server/.dev.vars
 .DS_Store
+
+# local audio samples for tuning tools/click-limiter.mjs
+/_audio/

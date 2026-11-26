@@ -27,6 +27,7 @@ class SettingsActivity : AppCompatActivity() {
   private lateinit var rgMicMode: RadioGroup
   private lateinit var swLockFps: SwitchCompat
   private lateinit var swStereo: SwitchCompat
+  private lateinit var rgClickLimiter: RadioGroup
   private lateinit var swPreferUsb: SwitchCompat
   private lateinit var swAutoRecord: SwitchCompat
   private lateinit var rgRecordQuality: RadioGroup
@@ -40,6 +41,9 @@ class SettingsActivity : AppCompatActivity() {
   private lateinit var upUnpair: Button
   private lateinit var upAuto: SwitchCompat
   private lateinit var upMobile: SwitchCompat
+  private lateinit var ytChannel: EditText
+  private lateinit var ytTag: TextView
+  private lateinit var swShowChat: SwitchCompat
 
   private val cameraInfo by lazy { BackCameraInfo(this) }
 
@@ -60,6 +64,7 @@ class SettingsActivity : AppCompatActivity() {
     rgMicMode = findViewById(R.id.rg_mic_mode)
     swLockFps = findViewById(R.id.sw_lock_fps)
     swStereo = findViewById(R.id.sw_stereo)
+    rgClickLimiter = findViewById(R.id.rg_click_limiter)
     swPreferUsb = findViewById(R.id.sw_prefer_usb)
     swAutoRecord = findViewById(R.id.sw_auto_record)
     rgRecordQuality = findViewById(R.id.rg_record_quality)
@@ -73,6 +78,9 @@ class SettingsActivity : AppCompatActivity() {
     upUnpair = findViewById(R.id.up_unpair)
     upAuto = findViewById(R.id.up_auto)
     upMobile = findViewById(R.id.up_mobile)
+    ytChannel = findViewById(R.id.yt_channel)
+    ytTag = findViewById(R.id.yt_tag)
+    swShowChat = findViewById(R.id.sw_show_chat)
 
     fill(SettingsStore.load(this))
     upServer.setText(UploadConfig.draftServer(this))
@@ -127,6 +135,8 @@ class SettingsActivity : AppCompatActivity() {
   private fun renderUpload() {
     val paired = UploadConfig.paired(this)
     val pending = UploadQueue.pendingCount(this)
+    // chat goes through the server, so it needs the same connection
+    ytTag.visibility = if (paired == null) android.view.View.VISIBLE else android.view.View.GONE
     if (paired != null) {
       upTag.text = "연결됨"
       upTag.setBackgroundResource(R.drawable.crl_tag_success)
@@ -194,9 +204,18 @@ class SettingsActivity : AppCompatActivity() {
     )
     swLockFps.isChecked = s.lockFps
     swStereo.isChecked = s.stereo
+    rgClickLimiter.check(
+      when (s.clickLimiter) {
+        ClickLimiter.Level.OFF -> R.id.cl_off
+        ClickLimiter.Level.LIGHT -> R.id.cl_light
+        ClickLimiter.Level.STRONG -> R.id.cl_strong
+      },
+    )
     swPreferUsb.isChecked = s.preferUsbMic
     swAutoRecord.isChecked = s.autoRecord
     rgRecordQuality.check(if (s.recordBitrateKbps > 0) R.id.rq_high else R.id.rq_same)
+    ytChannel.setText(s.youtubeChannel)
+    swShowChat.isChecked = s.showChat
     refreshHints()
   }
 
@@ -250,6 +269,12 @@ class SettingsActivity : AppCompatActivity() {
       etVideoBitrate.requestFocus()
       return
     }
+    val channel = normalizeChannel(ytChannel.text.toString())
+    if (channel == null) {
+      ytChannel.error = "@핸들, 채널 주소, UC로 시작하는 채널 ID 중 하나"
+      ytChannel.requestFocus()
+      return
+    }
 
     val settings = StreamSettings(
       serverUrl = server,
@@ -264,6 +289,11 @@ class SettingsActivity : AppCompatActivity() {
       },
       sampleRate = if (rgSampleRate.checkedRadioButtonId == R.id.sr_44) 44100 else 48000,
       stereo = swStereo.isChecked,
+      clickLimiter = when (rgClickLimiter.checkedRadioButtonId) {
+        R.id.cl_light -> ClickLimiter.Level.LIGHT
+        R.id.cl_strong -> ClickLimiter.Level.STRONG
+        else -> ClickLimiter.Level.OFF
+      },
       micMode = when (rgMicMode.checkedRadioButtonId) {
         R.id.mic_camcorder -> MicMode.CAMCORDER
         R.id.mic_default -> MicMode.DEFAULT
@@ -278,6 +308,8 @@ class SettingsActivity : AppCompatActivity() {
       lockFps = swLockFps.isChecked,
       autoRecord = swAutoRecord.isChecked,
       recordBitrateKbps = if (rgRecordQuality.checkedRadioButtonId == R.id.rq_high) HIGH_RECORD_KBPS else 0,
+      youtubeChannel = channel,
+      showChat = swShowChat.isChecked,
     )
     SettingsStore.save(this, settings)
     UploadConfig.saveDrafts(this, upServer.text.toString().trim().trimEnd('/'), upDevice.text.toString().trim())
@@ -286,7 +318,24 @@ class SettingsActivity : AppCompatActivity() {
     finish()
   }
 
+  /**
+   * "" stays "" (chat off), "roena" -> "@roena"; URLs and UC ids are kept as typed
+   * (the server resolves them). null when it can't be a channel.
+   */
+  private fun normalizeChannel(raw: String): String? {
+    val s = raw.trim()
+    if (s.isEmpty()) return ""
+    if (s.startsWith("http://", ignoreCase = true) || s.startsWith("https://", ignoreCase = true)) {
+      return s.takeIf { it.contains("youtube.com/", ignoreCase = true) }
+    }
+    if (CHANNEL_ID.matches(s)) return s
+    val handle = if (s.startsWith("@")) s else "@$s"
+    return handle.takeIf { HANDLE.matches(it) }
+  }
+
   companion object {
     private const val HIGH_RECORD_KBPS = 20000
+    private val CHANNEL_ID = Regex("^UC[\\w-]{22}$")
+    private val HANDLE = Regex("^@[\\p{L}\\p{N}._-]{3,30}$")
   }
 }

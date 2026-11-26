@@ -1,8 +1,9 @@
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { pairedPage, errorPage } from "./pages";
+import { YtError, chatPage, errorStatus, findLive, type YtEnv } from "./youtube";
 
-export interface Env {
+export interface Env extends YtEnv {
   DB: D1Database;
   BUCKET: R2Bucket;
   ASSETS: Fetcher;
@@ -533,6 +534,36 @@ app.delete("/api/device/uploads/:id", requireDevice, async (c) => {
   const up = await deviceUpload(c);
   if (up && up.status === "uploading") await removeRecording(c.env, up);
   return c.json({ ok: true });
+});
+
+// ------------------------------------------------------------------ youtube chat (phone overlay)
+
+function ytFail(c: Ctx, e: unknown) {
+  if (e instanceof YtError) return c.json({ error: e.code }, errorStatus(e.code));
+  console.error("youtube", e);
+  return c.json({ error: "upstream" }, 502);
+}
+
+/** ?channel=@handle[&deep=1] -> the broadcast that is live now ({ live:false } while YouTube has not started it) */
+app.get("/api/device/youtube/live", requireDevice, async (c) => {
+  const channel = c.req.query("channel") ?? "";
+  if (!channel.trim()) return c.json({ error: "not_found" }, 404);
+  try {
+    return c.json(await findLive(c.env, channel, c.req.query("deep") === "1"));
+  } catch (e) {
+    return ytFail(c, e);
+  }
+});
+
+/** ?liveChatId=..[&pageToken=..] -> new messages since pageToken */
+app.get("/api/device/youtube/chat", requireDevice, async (c) => {
+  const liveChatId = c.req.query("liveChatId") ?? "";
+  if (!liveChatId) return c.json({ error: "not_found" }, 404);
+  try {
+    return c.json(await chatPage(c.env, liveChatId, c.req.query("pageToken") || undefined));
+  } catch (e) {
+    return ytFail(c, e);
+  }
 });
 
 app.all("/api/*", (c) => c.json({ error: "not found" }, 404));
