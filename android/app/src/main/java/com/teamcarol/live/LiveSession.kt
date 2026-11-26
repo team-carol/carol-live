@@ -16,6 +16,7 @@ import android.view.SurfaceView
 import android.view.View
 import com.pedro.common.ConnectChecker
 import com.pedro.common.StreamingStatsReport
+import com.pedro.encoder.input.audio.NoAudioEffect
 import com.pedro.encoder.input.sources.audio.MicrophoneSource
 import com.pedro.encoder.input.sources.video.Camera2Source
 import com.pedro.library.base.recording.RecordController
@@ -214,6 +215,11 @@ object LiveSession : ConnectChecker {
       }
       if (ok) {
         activeMicSource = source
+        m.setAudioEffect(
+          settings.clickLimiter.params
+            ?.let { ClickLimiter(settings.sampleRate, if (settings.stereo) 2 else 1, it) }
+            ?: NoAudioEffect(),
+        )
         if (source != wanted) message("마이크 모드를 ${MicMode.labelOf(source)}(으)로 대체함")
         return true
       }
