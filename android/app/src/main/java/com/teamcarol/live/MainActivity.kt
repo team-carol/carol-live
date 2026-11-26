@@ -5,16 +5,25 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.os.SystemClock
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.TextUtils
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -50,7 +59,15 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
   private lateinit var btnMute: Button
   private lateinit var btnRecord: Button
   private lateinit var btnUpdate: Button
+  private lateinit var chatPanel: View
+  private lateinit var chatStatus: TextView
+  private lateinit var chatFold: TextView
+  private lateinit var chatList: LinearLayout
   private var newRelease: Updates.Release? = null
+
+  /** between onStart and onStop: chat is only fetched while this screen is on */
+  private var visible = false
+  private var chatRevision = -1
 
   private var surfaceReady = false
   private val session = LiveSession
@@ -125,7 +142,9 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
 
   override fun onStart() {
     super.onStart()
+    visible = true
     session.listener = this
+    YouTubeChat.listener = YouTubeChat.Listener { renderChat(force = true) }
     render()
     Updates.check(this, force = false) { result ->
       newRelease = result.getOrNull()
@@ -141,7 +160,11 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
 
   override fun onStop() {
     super.onStop()
+    visible = false
     if (session.listener === this) session.listener = null
+    YouTubeChat.listener = null
+    // screen off / app in background: stop spending chat quota (the stream keeps going)
+    YouTubeChat.update(this, session.settings, session.isStreaming, visible = false)
   }
 
   override fun onDestroy() {
@@ -190,6 +213,20 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     btnMute = findViewById(R.id.btn_mute)
     btnRecord = findViewById(R.id.btn_record)
     btnUpdate = findViewById(R.id.btn_update)
+    chatPanel = findViewById(R.id.chat_panel)
+    chatStatus = findViewById(R.id.chat_status)
+    chatFold = findViewById(R.id.chat_fold)
+    chatList = findViewById(R.id.chat_list)
+    findViewById<View>(R.id.chat_header).setOnClickListener {
+      val chat = YouTubeChat
+      if (chat.status == YouTubeChat.Status.GAVE_UP || chat.status == YouTubeChat.Status.ERROR) {
+        chat.retry()
+      } else {
+        chat.collapsed = !chat.collapsed
+        chatRevision = -1
+        renderChat(force = true)
+      }
+    }
   }
 
   private fun goFullscreen() {
@@ -348,6 +385,80 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     val busy = s.isActive
     btnSettings.isEnabled = !busy
     btnSettings.alpha = if (busy) DISABLED_ALPHA else 1f
+
+    YouTubeChat.update(this, settings, streaming, visible)
+    renderChat(force = false)
+  }
+
+  // ---------------------------------------------------------------- youtube chat
+
+  private fun renderChat(force: Boolean) {
+    if (!::chatPanel.isInitialized) return
+    val chat = YouTubeChat
+    val show = session.isStreaming && chat.status != YouTubeChat.Status.OFF
+    chatPanel.visibility = if (show) View.VISIBLE else View.GONE
+    if (!show) return
+
+    chatStatus.text = when (chat.status) {
+      YouTubeChat.Status.SEARCHING -> "라이브 찾는 중…"
+      YouTubeChat.Status.LIVE -> chat.detail ?: "연결됨"
+      YouTubeChat.Status.ENDED -> "방송이 끝남 · 새 방송 찾는 중"
+      YouTubeChat.Status.NEED_PAIRING -> "설정 → 업로드에서 서버에 연결해야 보임"
+      else -> chat.detail ?: ""
+    }
+    chatStatus.setTextColor(
+      color(
+        when (chat.status) {
+          YouTubeChat.Status.LIVE -> R.color.crl_success
+          YouTubeChat.Status.QUOTA, YouTubeChat.Status.ERROR, YouTubeChat.Status.GAVE_UP -> R.color.crl_warning
+          else -> R.color.crl_muted
+        },
+      ),
+    )
+    chatFold.text = if (chat.collapsed) "펼치기" else "접기"
+    chatList.visibility = if (chat.collapsed) View.GONE else View.VISIBLE
+    if (chat.collapsed || (!force && chat.revision == chatRevision)) return
+
+    chatRevision = chat.revision
+    val portrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    val recent = chat.messages.takeLast(if (portrait) 10 else 6)
+    chatList.removeAllViews()
+    if (recent.isEmpty() && chat.status == YouTubeChat.Status.LIVE) {
+      chatList.addView(chatLine(SpannableStringBuilder("아직 채팅 없음"), R.color.crl_dim))
+    }
+    for (m in recent) chatList.addView(chatLine(messageText(m), R.color.crl_ink_2))
+  }
+
+  /** "[₩5,000] 이름  내용": amount in warning, name tinted by role, text in ink */
+  private fun messageText(m: YouTubeChat.Message): SpannableStringBuilder {
+    val sb = SpannableStringBuilder()
+    m.amount?.let {
+      sb.append(it, ForegroundColorSpan(color(R.color.crl_warning)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+      sb.setSpan(StyleSpan(Typeface.BOLD), 0, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+      sb.append("  ")
+    }
+    val nameColor = when {
+      m.owner -> R.color.crl_accent
+      m.mod -> R.color.crl_success
+      m.member -> R.color.crl_accent_soft
+      else -> R.color.crl_muted
+    }
+    val start = sb.length
+    sb.append(m.author)
+    sb.setSpan(ForegroundColorSpan(color(nameColor)), start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    sb.setSpan(StyleSpan(Typeface.BOLD), start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    val text = m.text.ifBlank { if (m.type == "member") "멤버십 가입" else "" }
+    if (text.isNotEmpty()) sb.append("  ").append(text)
+    return sb
+  }
+
+  private fun chatLine(text: CharSequence, colorRes: Int) = TextView(this).apply {
+    this.text = text
+    setTextColor(color(colorRes))
+    setTextSize(TypedValue.COMPLEX_UNIT_PX, resources.getDimension(R.dimen.crl_type_caption))
+    maxLines = 3
+    ellipsize = TextUtils.TruncateAt.END
+    setPadding(0, resources.getDimensionPixelSize(R.dimen.crl_space_2), 0, 0)
   }
 
   private fun formatElapsed(ms: Long): String {

@@ -113,6 +113,21 @@ Windows PowerShell에서 `npm`/`npx`가 "스크립트를 실행할 수 없으므
 
 이후 배포는 `cd server && npm run deploy`만 하면 됨.
 
+### 유튜브 채팅 (방송 화면 오버레이)
+
+앱 설정 → 유튜브 채팅에 채널(`@핸들`)을 적으면, 방송 중 앱 화면 오른쪽 아래에 그 채널 라이브의 채팅이 뜸.
+채팅은 폰 화면에만 보이고 방송 영상에는 안 들어감. 앱 → 서버(`/api/device/youtube/*`) → YouTube Data API 순서로 가져오고,
+API 키는 서버에만 있음.
+
+1. [Google Cloud 콘솔](https://console.cloud.google.com/)에서 프로젝트 만들기
+2. API 및 서비스 → 라이브러리 → **YouTube Data API v3** → 사용
+3. API 및 서비스 → 사용자 인증 정보 → 사용자 인증 정보 만들기 → **API 키**
+   → 키 수정에서 API 제한사항을 "YouTube Data API v3"로 제한
+4. `cd server && npx wrangler secret put YOUTUBE_API_KEY`
+
+무료 할당량은 하루 10,000 단위(팀 전체 공유, 한국 시간 오후 4~5시 초기화). 채팅 한 번 불러올 때 5 단위라,
+앱은 화면이 켜져 있을 때만 6~12초 간격으로 불러옴 (채팅이 조용하면 느리게). 채팅이 활발하면 하루 약 3시간, 조용하면 약 6시간 분량.
+
 ### 로컬 개발
 
 ```bash

@@ -32,4 +32,5 @@
   // secrets (kept out of this public repo):
   //   npx wrangler secret put DISCORD_CLIENT_SECRET
   //   npx wrangler secret put ALLOWED_DISCORD_IDS   comma separated Discord user ids that may log in
+  //   npx wrangler secret put YOUTUBE_API_KEY       YouTube Data API v3 key for the phone's chat overlay
 }
