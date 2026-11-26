@@ -8,8 +8,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 export const LEVELS = {
-  LIGHT: { marginDb: 14, ratio: 3, makeupDb: 4 },
-  STRONG: { marginDb: 9, ratio: 8, makeupDb: 8 },
+  LIGHT: { marginDb: 12, ratio: 3, makeupDb: 5 },
+  STRONG: { marginDb: 10, ratio: 8, makeupDb: 9 },
 };
 const DEFAULTS = { kneeDb: 6, floorDb: -36, releaseMs: 15, ceilingDb: -1 };
 

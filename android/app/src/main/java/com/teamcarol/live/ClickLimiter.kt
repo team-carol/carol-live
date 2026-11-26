@@ -40,10 +40,15 @@ class ClickLimiter(sampleRate: Int, private val channels: Int, private val p: Pa
     val ceilingDb: Float = -1f,
   )
 
+  /**
+   * Tuned on a 58 min maimai stream (DJI Mic Mini on the collar): game sound peaks ~8 dB over the
+   * 1 s median, clicks ~24 dB over it, nearly nothing in between. 약 leaves clicks ~16 dB over,
+   * 강 ~12 dB, while the game sound comes up by the makeup.
+   */
   enum class Level(val label: String, val params: Params?) {
     OFF("끔", null),
-    LIGHT("약", Params(marginDb = 14f, ratio = 3f, makeupDb = 4f)),
-    STRONG("강", Params(marginDb = 9f, ratio = 8f, makeupDb = 8f)),
+    LIGHT("약", Params(marginDb = 12f, ratio = 3f, makeupDb = 5f)),
+    STRONG("강", Params(marginDb = 10f, ratio = 8f, makeupDb = 9f)),
     ;
 
     companion object {
