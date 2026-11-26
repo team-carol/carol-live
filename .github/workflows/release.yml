@@ -1,10 +1,17 @@
 name: Release
 
-# push a tag like v0.3.1 -> signed APK attached to a GitHub Release.
-# The app checks the latest release and offers the update.
+# Signed APK attached to a GitHub Release; the app checks the latest release and offers the update.
+# Two ways to start it:
+#  - Actions > Release > Run workflow, version "0.5.0" (from main; creates the tag v0.5.0) - works from a phone
+#  - push a tag like v0.5.0
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "버전 (예: 0.5.0). main의 최신 커밋에 v태그를 만들고 릴리스함"
+        required: true
 
 permissions:
   contents: write
@@ -17,6 +24,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if [ "$GITHUB_REF" != refs/heads/main ]; then
+              echo "::error::Run it from the main branch"; exit 1
+            fi
+            v="${INPUT_VERSION#v}"
+            if git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null; then
+              echo "::error::v$v already exists. Use a new version number"; exit 1
+            fi
+          else
+            v="${GITHUB_REF_NAME#v}"
+          fi
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must look like 0.5.0 (got '$v')"; exit 1
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -43,14 +69,16 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           # monotonically increasing version code for updates
           CODE=$((100 + GITHUB_RUN_NUMBER))
           ./gradlew --no-daemon :app:assembleRelease -PappVersionName="$VERSION" -PappVersionCode="$CODE"
           mkdir -p ../dist
-          cp app/build/outputs/apk/release/app-release.apk "../dist/carol-live-${GITHUB_REF_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "../dist/carol-live-v${VERSION}.apk"
           rm -f "$RUNNER_TEMP/release.jks"
+      # creates the tag at this commit when started from the Actions tab
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
           files: dist/*.apk
           generate_release_notes: true

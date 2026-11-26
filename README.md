@@ -32,13 +32,17 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 ## 릴리스 (폰에서 APK 받기)
 
-`v0.3.1` 같은 태그를 푸시하면 GitHub Actions가 서명된 APK를 만들어 [Releases](https://github.com/team-carol/carol-live/releases)에 올림.
+GitHub Actions가 서명된 APK를 만들어 [Releases](https://github.com/team-carol/carol-live/releases)에 올림.
 앱은 최신 릴리스를 확인해서 새 버전이 있으면 화면 오른쪽 위에 **새 버전** 버튼을 띄움 (설정 → 앱 정보 → 업데이트 확인으로도 가능).
 설치할 때만 갤럭시 '보안 위험 자동 차단'을 잠깐 꺼야 함.
 
-```bash
-git tag v0.3.1 && git push origin v0.3.1
-```
+릴리스하는 방법은 둘 중 하나 (PR들을 main에 머지한 다음):
+
+- **웹/폰에서**: [Actions → Release](https://github.com/team-carol/carol-live/actions/workflows/release.yml) → **Run workflow** →
+  branch `main`, 버전 `0.5.0` 입력 → 실행. main 최신 커밋에 `v0.5.0` 태그를 만들고 릴리스함
+- **터미널에서**: `git tag v0.5.0 && git push origin v0.5.0`
+
+이미 있는 버전 번호는 거부됨. 앱은 숫자로 비교하니 항상 올려서 씀.
 
 ### 서명 키 (처음 한 번)
 
@@ -111,7 +115,16 @@ Windows PowerShell에서 `npm`/`npx`가 "스크립트를 실행할 수 없으므
    ```
    디스코드 ID: 디스코드 설정 → 고급 → 개발자 모드 켜기 → 프로필 우클릭 → 사용자 ID 복사
 
-이후 배포는 `cd server && npm run deploy`만 하면 됨.
+이후 배포는 자동임: main에 `server/`나 `web/` 변경이 들어오면 [Deploy server](https://github.com/team-carol/carol-live/actions/workflows/deploy.yml)가
+D1 마이그레이션 + `wrangler deploy`를 함 (Actions 탭에서 Run workflow로 수동 실행도 됨). 터미널에서 직접 하려면 `cd server && npm run deploy`.
+
+자동 배포용 토큰 (처음 한 번):
+1. Cloudflare 대시보드 → 오른쪽 위 프로필 → 내 프로필 → API 토큰 → 토큰 생성 → **Cloudflare Workers 편집** 템플릿
+2. 권한에 **계정 · D1 · 편집** 추가, 영역 리소스는 `team-carol.com`
+3. 만든 토큰을 GitHub [Settings → Secrets → Actions](https://github.com/team-carol/carol-live/settings/secrets/actions)에 `CLOUDFLARE_API_TOKEN`으로 등록
+
+워커 비밀값(`DISCORD_CLIENT_SECRET` 등)은 터미널 없이 Cloudflare 대시보드 → Workers 및 Pages → carol-live → 설정 → 변수 및 비밀에서도 추가·변경할 수 있음.
+배포해도 비밀값은 그대로 남음.
 
 ### 로컬 개발
 
