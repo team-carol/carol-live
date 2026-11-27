@@ -1,3 +1,5 @@
+import type { Play, PlayDetails } from "./lib/songs";
+
 export interface Me {
   id: string;
   name: string;
@@ -24,6 +26,13 @@ export interface LiveSummary {
   streamed?: boolean;
 }
 
+/** android GameActivity.toAnalysisJson: button clicks per second over the recording */
+export interface RecordingAnalysis {
+  v: number;
+  clickDb?: number;
+  clicksPerSecond: string;
+}
+
 export interface Recording {
   id: string;
   device_name: string;
@@ -36,6 +45,20 @@ export interface Recording {
   created_at: number;
   completed_at: number | null;
   has_thumb?: number;
+  /** detail only; null for recordings made before app v0.6 */
+  analysis?: RecordingAnalysis | null;
+  /** detail only: imported maimai DX NET plays around this recording's time */
+  plays?: Play[];
+}
+
+/** what the maimai DX NET bookmarklet sends (lib/maimaiScrape.js) */
+export interface PlayImport {
+  playedAt: number;
+  track: number;
+  title: string;
+  difficulty: string | null;
+  achievement: number | null;
+  details: PlayDetails;
 }
 
 export interface DeviceInfo {
@@ -68,6 +91,11 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  importPlays: (plays: PlayImport[]) =>
+    call<{ received: number; added: number; from: number; to: number }>("/api/plays", {
+      method: "POST",
+      body: JSON.stringify({ plays }),
+    }),
   me: () => call<Me>("/api/me"),
   logout: () => call<{ ok: true }>("/auth/logout", { method: "POST" }),
   recordings: () => call<{ items: Recording[]; usage: { used: number; cap: number } }>("/api/recordings"),

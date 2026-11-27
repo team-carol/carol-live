@@ -301,7 +301,70 @@ app.get("/api/recordings/:id", requireUser, async (c) => {
   const { r2_key, upload_id, ...rest } = rec;
   void r2_key;
   void upload_id;
-  return c.json({ ...rest, summary: rest.summary ? JSON.parse(rest.summary as string) : null });
+  // maimai DX NET plays that could belong to this recording (matched to songs on the web)
+  const startAt = Number(rest.recorded_at ?? rest.created_at);
+  const endAt = startAt + Number(rest.duration_ms ?? 0);
+  const { results: plays } = await c.env.DB.prepare(
+    `SELECT played_at, track, title, difficulty, achievement, details FROM plays
+     WHERE user_id = ? AND played_at BETWEEN ? AND ? ORDER BY played_at, track`,
+  )
+    .bind(c.get("user").id, startAt - PLAY_WINDOW_BEFORE_MS, endAt + PLAY_WINDOW_AFTER_MS)
+    .all();
+  return c.json({
+    ...rest,
+    summary: rest.summary ? JSON.parse(rest.summary as string) : null,
+    analysis: rest.analysis ? JSON.parse(rest.analysis as string) : null,
+    plays: plays.map((p) => ({ ...p, details: p.details ? JSON.parse(p.details as string) : null })),
+  });
+});
+
+// ------------------------------------------------------------------ maimai DX NET plays
+
+const PLAY_WINDOW_BEFORE_MS = 5 * 60_000;
+const PLAY_WINDOW_AFTER_MS = 10 * 60_000;
+const DIFFICULTIES = new Set(["basic", "advanced", "expert", "master", "remaster", "utage"]);
+
+interface PlayIn {
+  playedAt?: number;
+  track?: number;
+  title?: string;
+  difficulty?: string;
+  achievement?: number;
+  details?: Record<string, unknown>;
+}
+
+/** import from the bookmarklet (via /import on the web); re-importing the same plays is harmless */
+app.post("/api/plays", requireUser, async (c) => {
+  const user = c.get("user");
+  const body = await c.req.json<{ plays?: PlayIn[] }>().catch(() => ({}) as { plays?: PlayIn[] });
+  const list = Array.isArray(body.plays) ? body.plays.slice(0, 200) : [];
+  const rows = list.flatMap((p) => {
+    const playedAt = Number(p.playedAt);
+    const title = typeof p.title === "string" ? p.title.trim().slice(0, 200) : "";
+    if (!Number.isFinite(playedAt) || playedAt <= 0 || !title) return [];
+    const difficulty = typeof p.difficulty === "string" && DIFFICULTIES.has(p.difficulty) ? p.difficulty : null;
+    const achievement = Number.isFinite(Number(p.achievement)) ? Number(p.achievement) : null;
+    const track = Number.isInteger(Number(p.track)) ? Number(p.track) : 0;
+    const details = p.details && typeof p.details === "object" ? JSON.stringify(p.details).slice(0, 2000) : null;
+    return [{ playedAt, track, title, difficulty, achievement, details }];
+  });
+  if (!rows.length) return c.json({ error: "가져올 플레이 기록이 없음" }, 400);
+
+  const before = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM plays WHERE user_id = ?").bind(user.id).first<{ n: number }>();
+  const stmt = c.env.DB.prepare(
+    `INSERT INTO plays (user_id, played_at, track, title, difficulty, achievement, details, imported_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (user_id, played_at, track, title) DO UPDATE SET
+       difficulty = excluded.difficulty, achievement = excluded.achievement, details = excluded.details`,
+  );
+  const t = now();
+  await c.env.DB.batch(rows.map((r) => stmt.bind(user.id, r.playedAt, r.track, r.title, r.difficulty, r.achievement, r.details, t)));
+  const after = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM plays WHERE user_id = ?").bind(user.id).first<{ n: number }>();
+  const range = rows.reduce((a, r) => ({ from: Math.min(a.from, r.playedAt), to: Math.max(a.to, r.playedAt) }), {
+    from: Infinity,
+    to: 0,
+  });
+  return c.json({ received: rows.length, added: (after?.n ?? 0) - (before?.n ?? 0), from: range.from, to: range.to });
 });
 
 app.delete("/api/recordings/:id", requireUser, async (c) => {
@@ -457,6 +520,8 @@ app.post("/api/device/uploads", requireDevice, async (c) => {
     recordedAt?: number;
     durationMs?: number;
     summary?: unknown;
+    /** android GameActivity.toAnalysisJson: { v, clickDb, clicksPerSecond: base64 } */
+    analysis?: { clicksPerSecond?: unknown };
   }>();
   const size = Number(body.size);
   const filename = (body.filename ?? "").replace(/[\\/]/g, "_").slice(0, 120);
@@ -472,19 +537,27 @@ app.post("/api/device/uploads", requireDevice, async (c) => {
   const mp = await c.env.BUCKET.createMultipartUpload(key, { httpMetadata: { contentType: "video/mp4" } });
   await c.env.DB.prepare(
     `INSERT INTO recordings (id, user_id, device_id, device_name, r2_key, filename, size, status, upload_id, part_size,
-       recorded_at, duration_ms, summary, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'uploading', ?, ?, ?, ?, ?, ?)`,
+       recorded_at, duration_ms, summary, analysis, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'uploading', ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       recId, device.user_id, device.id, device.name, key, filename, size, mp.uploadId, PART_SIZE,
       Number.isFinite(body.recordedAt) ? body.recordedAt : null,
       Number.isFinite(body.durationMs) ? body.durationMs : null,
       body.summary ? JSON.stringify(body.summary).slice(0, 20_000) : null,
+      analysisJson(body.analysis),
       now(),
     )
     .run();
   return c.json({ id: recId, partSize: PART_SIZE, parts: Math.ceil(size / PART_SIZE), deleted: room.deleted });
 });
+
+/** keep only a well-formed analysis; 1 byte per second, so 12 h is ~58 KB of base64 */
+function analysisJson(a: { clicksPerSecond?: unknown } | undefined): string | null {
+  if (!a || typeof a.clicksPerSecond !== "string") return null;
+  if (a.clicksPerSecond.length > 60_000 || !/^[A-Za-z0-9+/=]*$/.test(a.clicksPerSecond)) return null;
+  return JSON.stringify(a);
+}
 
 async function deviceUpload(c: Ctx) {
   return c.env.DB.prepare("SELECT id, r2_key, upload_id, size, status FROM recordings WHERE id = ? AND device_id = ?")

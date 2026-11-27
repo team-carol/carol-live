@@ -9,6 +9,8 @@ data class RecordedFile(
   val name: String,
   val startedAt: Long,
   val durationMs: Long,
+  /** button clicks per second over the recording ([GameActivity]); not kept in the summary JSON */
+  val activity: ByteArray? = null,
 )
 
 /**

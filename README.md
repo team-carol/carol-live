@@ -18,6 +18,15 @@ carol-live/
 4. 웹에서 디스코드 로그인 → 기기별 폴더에서 영상 열기 → 시작·끝 지정 → **재인코딩 없이** 잘라 받기
    (필요한 구간의 바이트만 Range로 받아서 브라우저에서 mp4를 새로 씀)
 
+### 곡 단위로 나누기 (앱 v0.6+ 녹화)
+
+- 앱이 녹화하면서 마이크로 **초당 버튼 클릭 수**를 세서 업로드할 때 같이 보냄 (`GameActivity.kt`)
+- 웹이 그걸로 곡 구간을 나눔 (`web/src/lib/songs.ts`): 게임 중엔 초당 5~15번 몰아치고, 곡 선택·결과 화면은 띄엄띄엄이거나 조용함.
+  곡 중간 30초 안쪽의 쉬는 부분은 이어 붙이고, 곡 선택 때 두드린 건 빼냄. 58분 실제 방송으로 맞춤 (`web/test/fixtures`)
+- 편집기에서 곡마다 **재생 / 받기** 한 번이면 그 곡만 잘라짐 (앞뒤 5초 여유). 시작·끝은 ±1·5초 버튼으로 손가락으로도 조정
+- **곡 이름**: 웹 상단 `maimai` 메뉴의 북마크를 maimai DX NET 플레이 기록 페이지에서 누르면 최근 50곡(곡명·난이도·달성률·랭크·FC/AP·초 단위 시각)을
+  가져옴 → 녹화 시간과 맞춰서 곡에 이름이 붙음. 기록 페이지 HTML이 바뀌면 `web/src/lib/maimaiScrape.js`를 고침
+
 ## android
 
 ```powershell
@@ -156,7 +165,7 @@ npm run db:migrate:local && npm run dev          # http://localhost:8787
 ### 테스트
 
 ```bash
-cd web && SAMPLE_DIR=<mp4 폴더> npm test    # mp4 무손실 자르기 (ffmpeg/ffprobe 필요)
+cd web && SAMPLE_DIR=<mp4 폴더> npm test    # mp4 무손실 자르기 (ffmpeg/ffprobe 필요) + 곡 나누기·기록 맞추기
 cd server && npm run typecheck
 ```
 

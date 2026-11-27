@@ -16,7 +16,6 @@ import android.view.SurfaceView
 import android.view.View
 import com.pedro.common.ConnectChecker
 import com.pedro.common.StreamingStatsReport
-import com.pedro.encoder.input.audio.NoAudioEffect
 import com.pedro.encoder.input.sources.audio.MicrophoneSource
 import com.pedro.encoder.input.sources.video.Camera2Source
 import com.pedro.library.base.recording.RecordController
@@ -85,6 +84,9 @@ object LiveSession : ConnectChecker {
     private set
   var recordSince = 0L
     private set
+
+  /** button clicks per second from the mic, sliced per recording for song splitting on the web */
+  private var gameActivity: GameActivity? = null
 
   private var userStopped = false
   private var recordFile: File? = null
@@ -215,10 +217,11 @@ object LiveSession : ConnectChecker {
       }
       if (ok) {
         activeMicSource = source
+        val channels = if (settings.stereo) 2 else 1
+        val activity = GameActivity(settings.sampleRate, channels)
+        gameActivity = activity
         m.setAudioEffect(
-          settings.clickLimiter.params
-            ?.let { ClickLimiter(settings.sampleRate, if (settings.stereo) 2 else 1, it) }
-            ?: NoAudioEffect(),
+          MicEffects(activity, settings.clickLimiter.params?.let { ClickLimiter(settings.sampleRate, channels, it) }),
         )
         if (source != wanted) message("마이크 모드를 ${MicMode.labelOf(source)}(으)로 대체함")
         return true
@@ -383,8 +386,15 @@ object LiveSession : ConnectChecker {
     recordFile = null
     s.stopRecord()
     if (file != null) {
+      val now = SystemClock.elapsedRealtime()
       session?.files?.add(
-        RecordedFile(file.absolutePath, file.name, recordStartedWall, SystemClock.elapsedRealtime() - recordSince),
+        RecordedFile(
+          file.absolutePath,
+          file.name,
+          recordStartedWall,
+          now - recordSince,
+          activity = gameActivity?.slice(recordSince, now),
+        ),
       )
     }
     if (!quiet) message(if (reason != null) "$reason · 그때까지 녹화는 저장됨" else "녹화 저장됨 · Movies/CarolLive")
