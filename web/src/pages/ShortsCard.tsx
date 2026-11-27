@@ -410,7 +410,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
   type Grab =
     | { kind: "move"; id: ElementId; box: Box }
     | { kind: "scale"; id: Sized; box: Box; scale: number; reach: number }
-    | { kind: "footage"; align: number };
+    | { kind: "footage"; align: number; alignX: number };
   const drag = useRef<(Grab & { x: number; y: number; moved: boolean }) | null>(null);
   const framePoint = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -429,7 +429,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
     }
     const inside = (b: Box, pad: number) => p.x >= b.x - pad && p.x <= b.x + b.w + pad && p.y >= b.y - pad && p.y <= b.y + b.h + pad;
     const hit = boxes.find((b) => inside(b, 0)) ?? boxes.find((b) => inside(b, HIT_PAD));
-    return hit ? { kind: "move", id: hit.id, box: hit } : { kind: "footage", align: design.footage.align };
+    return hit ? { kind: "move", id: hit.id, box: hit } : { kind: "footage", align: design.footage.align, alignX: design.footage.alignX };
   };
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (busy) return;
@@ -449,7 +449,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
       // show what a press here would do
       if (busy) return;
       const over = grabAt(p);
-      e.currentTarget.style.cursor = over.kind === "scale" ? (over.id === "marks" ? "nesw-resize" : "nwse-resize") : over.kind === "move" ? "move" : "ns-resize";
+      e.currentTarget.style.cursor = over.kind === "scale" ? (over.id === "marks" ? "nesw-resize" : "nwse-resize") : over.kind === "move" ? "move" : "grab";
       setHover(over.kind === "move" ? over.id : null);
       return;
     }
@@ -457,7 +457,8 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
     if (!g.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
     g.moved = true;
     // pulling the footage down shows more of its top
-    if (g.kind === "footage") setDesign((d) => ({ ...d, footage: { ...d.footage, align: clamp(g.align - dy / 800, 0, 1) } }));
+    if (g.kind === "footage")
+      setDesign((d) => ({ ...d, footage: { ...d.footage, align: clamp(g.align - dy / 800, 0, 1), alignX: clamp(g.alignX - dx / 800, 0, 1) } }));
     else if (g.kind === "scale") scaleTo(g.id, (g.scale * Math.hypot(p.x - g.box.anchor.x, p.y - g.box.anchor.y)) / g.reach);
     else {
       const raw = { x: g.box.anchor.x + dx, y: g.box.anchor.y + dy };
@@ -702,7 +703,9 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
         {check("카드 뒤에 파란 배경", design.panels, (panels) => setDesign((d) => ({ ...d, panels })))}
         {slider("scrim", `글자 뒤 그라데이션 ${percent(design.scrim)}`, Math.round(design.scrim * 100), 0, 100, (v) => setDesign((d) => ({ ...d, scrim: v / 100 })), 5)}
         {slider("align", "영상 높이 (위 ↔ 아래)", Math.round(design.footage.align * 100), 0, 100, (v) => set("footage", { align: v / 100 }))}
+        {slider("align-x", "영상 좌우 (왼쪽 ↔ 오른쪽)", Math.round(design.footage.alignX * 100), 0, 100, (v) => set("footage", { alignX: v / 100 }))}
         {slider("zoom", `영상 확대 ${percent(design.footage.zoom)}`, Math.round(design.footage.zoom * 100), 100, 200, (v) => set("footage", { zoom: v / 100 }), 5)}
+        <p className="crl-helper">영상은 창보다 큰 방향으로만 움직입니다. 좌우로 옮기려면 확대를 올리거나 파란 배경을 켜 주세요.</p>
         {check("쇼츠 앱이 덮는 자리 보기", guide, setGuide)}
       </>
     ),

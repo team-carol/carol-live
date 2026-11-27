@@ -23,8 +23,12 @@ export interface Rect {
 }
 
 export interface ShortsDesign {
-  /** which part of the footage shows (0 = top, 1 = bottom) and how far it is zoomed in (1 = just covers) */
-  footage: { align: number; zoom: number };
+  /**
+   * Which part of the footage shows, up and down ([align]: 0 = top, 1 = bottom) and sideways ([alignX]:
+   * 0 = left, 1 = right), and how far it is zoomed in (1 = just covers). There is only room to move it in a
+   * direction where the footage is larger than its window.
+   */
+  footage: { align: number; alignX: number; zoom: number };
   /** blue panels behind the cards, as in the mai-log layout; the footage shows between them */
   panels: boolean;
   /** darkness of the gradient behind the result on the footage, 0 (none) to 1 */
@@ -43,7 +47,7 @@ export const PROFILE_Y = 1417;
 export const SCALE = { min: 0.5, max: 2 };
 
 export const DEFAULT_DESIGN: ShortsDesign = {
-  footage: { align: 0.55, zoom: 1 },
+  footage: { align: 0.55, alignX: 0.5, zoom: 1 },
   panels: false,
   scrim: 0.5,
   song: { show: true, style: "compact", y: SONG_Y.alone },
@@ -100,7 +104,11 @@ export function cleanDesign(input: unknown): ShortsDesign {
   }
   const [footage, song, achievement, marks, profile] = [v.footage, v.song, v.achievement, v.marks, v.profile].map(obj);
   return {
-    footage: { align: num(footage.align, 0, 1, D.footage.align), zoom: num(footage.zoom, 1, 2, D.footage.zoom) },
+    footage: {
+      align: num(footage.align, 0, 1, D.footage.align),
+      alignX: num(footage.alignX, 0, 1, D.footage.alignX),
+      zoom: num(footage.zoom, 1, 2, D.footage.zoom),
+    },
     panels: bool(v.panels, D.panels),
     scrim: num(v.scrim, 0, 1, D.scrim),
     song: { show: bool(song.show, D.song.show), style: song.style === "full" ? "full" : "compact", y: num(song.y, 0, SHORTS.height, D.song.y) },
