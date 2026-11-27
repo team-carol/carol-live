@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { Button, Card } from "@team-carol/design-system/react";
+import { Button, Card, TextInput } from "@team-carol/design-system/react";
 import { api, type MaimaiProfile } from "../api";
 import { clock } from "../format";
 import { CARD, type CardImages } from "../lib/shorts/card";
@@ -21,6 +21,30 @@ const PRESETS = [
 ];
 type Mode = "card" | "legacy";
 const PREFS_KEY = "carol.shorts";
+
+/** levels typed by hand (maimai DX NET only says "14+"), remembered per chart on this browser */
+const LEVELS_KEY = "carol.shortsLevels";
+const chartKey = (p: Play) => [p.title, p.difficulty ?? "", p.details?.kind ?? ""].join("|");
+
+function readLevels(): Record<string, string> {
+  try {
+    const v = JSON.parse(localStorage.getItem(LEVELS_KEY) ?? "{}");
+    return v && typeof v === "object" ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLevel(p: Play, level: string) {
+  try {
+    const all = readLevels();
+    if (level && level !== (p.details?.level ?? "")) all[chartKey(p)] = level;
+    else delete all[chartKey(p)];
+    localStorage.setItem(LEVELS_KEY, JSON.stringify(all));
+  } catch {
+    // only a convenience
+  }
+}
 
 function readPrefs(): { mode?: Mode; background?: boolean } {
   try {
@@ -51,6 +75,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
   const [y, setY] = useState(CARD.defaultY);
   const [align, setAlign] = useState(0.55);
   const [zoom, setZoom] = useState(1);
+  const [level, setLevel] = useState(() => readLevels()[chartKey(play)] ?? play.details?.level ?? "");
   const [guide, setGuide] = useState(false);
   const [fonts, setFonts] = useState(false);
   const [images, setImages] = useState<CardImages>({});
@@ -100,12 +125,20 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     };
   }, [play, profile]);
 
+  // another song: its own remembered level, or what maimai DX NET shows
+  useEffect(() => {
+    setLevel(readLevels()[chartKey(play)] ?? play.details?.level ?? "");
+  }, [play]);
+
+  /** the play as it is drawn: with the level typed here */
+  const shown = useMemo<Play>(() => ({ ...play, details: { ...play.details, level: level.trim() || undefined } }), [play, level]);
+
   const layout = useMemo(() => {
     if (!fonts) return null;
     return mode === "card"
-      ? cardLayout(play, images, y, { align, zoom })
-      : legacyLayout(play, profile ?? null, images, { background, align, zoom });
-  }, [fonts, mode, play, images, y, profile, background, align, zoom]);
+      ? cardLayout(shown, images, y, { align, zoom })
+      : legacyLayout(shown, profile ?? null, images, { background, align, zoom });
+  }, [fonts, mode, shown, images, y, profile, background, align, zoom]);
 
   const paint = useCallback(() => {
     const c = preview.current;
@@ -211,6 +244,20 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
           aria-label="쇼츠 미리보기"
         />
         <div className="shorts__controls">
+          <TextInput
+            label="레벨"
+            value={level}
+            maxLength={5}
+            inputMode="decimal"
+            placeholder={play.details?.level ?? "14.6"}
+            helperText="카드 오른쪽 숫자. 14.6처럼 직접 고칠 수 있고 이 곡은 다음에도 기억함"
+            disabled={busy}
+            onChange={(e) => {
+              setLevel(e.target.value);
+              saveLevel(play, e.target.value.trim());
+            }}
+          />
+
           <span className="crl-label">레이아웃</span>
           <div className="nudges" role="group" aria-label="레이아웃">
             <button type="button" className={chip(mode === "card")} aria-pressed={mode === "card"} disabled={busy} onClick={() => setMode("card")}>
