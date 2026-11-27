@@ -89,8 +89,15 @@ object UploadConfig {
 
   fun allowMobileData(ctx: Context): Boolean = p(ctx).getBoolean("allowMobile", false)
 
-  fun setUploadPrefs(ctx: Context, auto: Boolean, mobile: Boolean) {
-    p(ctx).edit().putBoolean("autoUpload", auto).putBoolean("allowMobile", mobile).apply()
+  /** remove the phone copy once the server has the whole file (off by default) */
+  fun deleteAfterUpload(ctx: Context): Boolean = p(ctx).getBoolean("deleteAfterUpload", false)
+
+  fun setUploadPrefs(ctx: Context, auto: Boolean, mobile: Boolean, deleteAfter: Boolean) {
+    p(ctx).edit()
+      .putBoolean("autoUpload", auto)
+      .putBoolean("allowMobile", mobile)
+      .putBoolean("deleteAfterUpload", deleteAfter)
+      .apply()
   }
 
   /** browser URL that starts pairing; the nonce must come back with the token */
@@ -120,6 +127,8 @@ object UploadQueue {
     val recordedAt: Long,
     val durationMs: Long,
     val summary: String,
+    /** GameActivity.toAnalysisJson, "" for files recorded before it existed */
+    val analysis: String = "",
     var recordingId: String? = null,
     var partSize: Long = 0,
     val parts: MutableMap<Int, String> = mutableMapOf(),
@@ -127,7 +136,7 @@ object UploadQueue {
   ) {
     fun toJson(): JSONObject = JSONObject()
       .put("path", path).put("name", name).put("size", size).put("recordedAt", recordedAt)
-      .put("durationMs", durationMs).put("summary", summary)
+      .put("durationMs", durationMs).put("summary", summary).put("analysis", analysis)
       .put("recordingId", recordingId).put("partSize", partSize).put("failed", failed)
       .put("parts", JSONObject(parts.mapKeys { it.key.toString() }))
 
@@ -141,6 +150,7 @@ object UploadQueue {
           recordedAt = o.getLong("recordedAt"),
           durationMs = o.getLong("durationMs"),
           summary = o.getString("summary"),
+          analysis = o.optString("analysis"),
           recordingId = o.optString("recordingId").takeIf { it.isNotEmpty() && it != "null" },
           partSize = o.optLong("partSize"),
           parts = parts?.keys()?.asSequence()?.associate { it.toInt() to parts.getString(it) }?.toMutableMap() ?: mutableMapOf(),
@@ -210,6 +220,7 @@ object Uploads {
           recordedAt = f.startedAt,
           durationMs = f.durationMs,
           summary = web.toString(),
+          analysis = f.activity?.let { GameActivity.toAnalysisJson(it).toString() } ?: "",
         ),
       )
     }
@@ -391,7 +402,8 @@ class UploadWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
           .put("size", file.length())
           .put("recordedAt", item.recordedAt)
           .put("durationMs", item.durationMs)
-          .put("summary", JSONObject(item.summary)),
+          .put("summary", JSONObject(item.summary))
+          .apply { if (item.analysis.isNotEmpty()) put("analysis", JSONObject(item.analysis)) },
       )
       item.recordingId = res.getString("id")
       item.partSize = res.getLong("partSize")
@@ -432,13 +444,17 @@ class UploadWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     }
 
     val parts = JSONArray(item.parts.toSortedMap().map { (n, etag) -> JSONObject().put("partNumber", n).put("etag", etag) })
-    Api.request(paired, "POST", "/api/device/uploads/${item.recordingId}/complete", JSONObject().put("parts", parts))
+    val done = Api.request(paired, "POST", "/api/device/uploads/${item.recordingId}/complete", JSONObject().put("parts", parts))
     UploadQueue.remove(ctx, item.path)
     // best effort: a frame for the web's file grid
     runCatching { Thumbnails.jpeg(file, item.durationMs) }
       .onSuccess { jpeg -> runCatching { Api.putBytes(paired, "/api/device/recordings/${item.recordingId}/thumbnail", jpeg, "image/jpeg") } }
       .onFailure { Log.w(TAG, "thumbnail failed", it) }
-    notify("${item.name} 업로드 완료")
+    // only when the server reports the exact byte count we have
+    val stored = done.optLong("size", -1)
+    val deleted = UploadConfig.deleteAfterUpload(ctx) && stored == file.length() && Recordings.delete(ctx, file)
+    if (UploadConfig.deleteAfterUpload(ctx) && !deleted) Log.w(TAG, "kept ${item.name}: server size $stored, local ${file.length()}")
+    notify(if (deleted) "${item.name} 업로드 완료 · 폰에서 지움" else "${item.name} 업로드 완료")
   }
 
   private fun progress(name: String, sent: Long, total: Long) {
