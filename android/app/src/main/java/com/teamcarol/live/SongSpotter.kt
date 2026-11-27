@@ -40,15 +40,22 @@ import org.json.JSONObject
  */
 object SongSpotter {
 
-  enum class Status { OFF, LOADING_TITLES, NO_TITLES, WATCHING }
+  enum class Status { OFF, LOADING_TITLES, NO_TITLES, FAILED, WATCHING }
 
   /** a song that was recognized, with how far into the session */
   data class Found(val atMs: Long, val title: String)
 
   private const val TAG = "CarolSong"
-  /** song titles as the aliases of team carol's maimai bot list them ({ aliases: [{ title, alias, … }] }) */
+  /**
+   * Song titles come from two places and are used together:
+   * - a list that ships with the app (assets): every title of SEGA's public song data for the Japanese and
+   *   the international version, as collected by OTOGE DB (github.com/zvuc/otoge-db). Always there.
+   * - the titles in the aliases of team carol's maimai bot ({ count, aliases: [{ title, alias, … }] }),
+   *   fetched once a day, which brings songs added after the app was built.
+   */
+  private const val TITLES_ASSET = "song_titles.txt"
   private const val TITLES_URL = "https://maimai.team-carol.com/api/aliases"
-  private const val TITLES_FILE = "song_titles.txt"
+  private const val TITLES_FILE = "song_titles_online.txt"
   private const val TITLES_MAX_AGE_MS = 24 * 60 * 60 * 1000L
 
   /** between reads while looking for a song / once one is known */
@@ -76,6 +83,14 @@ object SongSpotter {
   var lastRead: String? = null
     private set
 
+  /** why the readout is not working ([Status.FAILED]), or what went wrong fetching newer titles */
+  var problem: String? = null
+    private set
+
+  /** how many titles there are to compare with */
+  var titleCount = 0
+    private set
+
   private val found = ArrayList<Found>()
   /** songs of the running session, or of the last one once it has ended */
   val history: List<Found> get() = found
@@ -100,6 +115,7 @@ object SongSpotter {
     }
     try {
       if (status == Status.OFF) start(app)
+      if (status == Status.FAILED) return
       val index = titles
       if (index == null) {
         if (!loading) status = Status.NO_TITLES
@@ -132,18 +148,42 @@ object SongSpotter {
     nextReadAt = 0L
     startedAt = SystemClock.elapsedRealtime()
     status = Status.LOADING_TITLES
-    if (recognizer == null) recognizer = TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build())
-    if (titles == null && !loading) {
+    problem = null
+    if (recognizer == null) {
+      try {
+        recognizer = TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build())
+      } catch (e: Exception) {
+        Log.w(TAG, "no recognizer", e)
+        status = Status.FAILED
+        problem = "글자 인식기를 준비하지 못했습니다: ${reason(e)}"
+        return
+      }
+    }
+    // every session: the bundled list is instant, and a failed fetch gets another try
+    if (!loading) {
       loading = true
       worker.execute {
-        val loaded = runCatching { loadTitles(app) }.onFailure { Log.w(TAG, "titles failed", it) }.getOrNull()
+        var note: String? = null
+        val loaded = runCatching { loadTitles(app) { note = it } }
+          .onFailure {
+            Log.w(TAG, "titles failed", it)
+            note = "곡 목록을 읽지 못했습니다: ${reason(it)}"
+          }
+          .getOrNull()
         ui.post {
           loading = false
-          if (loaded != null && loaded.size > 0) titles = loaded
+          if (loaded != null && loaded.size > 0) {
+            titles = loaded
+            titleCount = loaded.size
+          }
+          problem = note
         }
       }
     }
   }
+
+  /** short and readable: this is shown on the phone so the cause can be told from a screenshot */
+  private fun reason(e: Throwable): String = (e.message?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName).take(80)
 
   private fun stop() {
     status = Status.OFF
@@ -268,41 +308,58 @@ object SongSpotter {
   /** one or two lines for the live screen, null when the experiment is off */
   fun describe(): String? = when (status) {
     Status.OFF -> null
-    Status.LOADING_TITLES -> "곡 인식 · 곡 목록을 받는 중입니다"
-    Status.NO_TITLES -> "곡 인식 · 곡 목록을 받지 못했습니다 (인터넷 연결 확인)"
-    Status.WATCHING -> "곡 인식 · " + (title ?: "찾는 중") + (lastRead?.let { "\n$it" } ?: "")
+    Status.LOADING_TITLES -> "곡 인식 · 곡 목록을 읽는 중입니다"
+    Status.NO_TITLES -> "곡 인식 · " + (problem ?: "곡 목록이 없습니다")
+    Status.FAILED -> "곡 인식 · " + (problem ?: "시작하지 못했습니다")
+    Status.WATCHING -> "곡 인식 · " + (title ?: "찾는 중") + " (곡 ${titleCount}개)" +
+      (lastRead?.let { "\n$it" } ?: "") +
+      (problem?.let { "\n$it" } ?: "")
   }
 
   // ------------------------------------------------------------------ song titles (worker thread)
 
-  private fun loadTitles(app: Context): TitleIndex? {
+  /** [onNote] gets a line for the screen when the newer titles could not be fetched (the rest still works) */
+  private fun loadTitles(app: Context, onNote: (String) -> Unit): TitleIndex? {
+    val bundled = runCatching { app.assets.open(TITLES_ASSET).bufferedReader().use { it.readLines() } }
+      .onFailure { Log.w(TAG, "no bundled titles", it) }
+      .getOrDefault(emptyList())
     val file = File(app.filesDir, TITLES_FILE)
     val fresh = file.exists() && System.currentTimeMillis() - file.lastModified() < TITLES_MAX_AGE_MS
     if (!fresh) {
-      runCatching {
-        val connection = (URL(TITLES_URL).openConnection() as HttpURLConnection).apply {
-          connectTimeout = 10_000
-          readTimeout = 20_000
+      runCatching { file.writeText(fetchTitles().joinToString("\n")) }
+        .onFailure {
+          Log.w(TAG, "could not refresh titles", it)
+          onNote("새 곡 목록을 받지 못했습니다 (${reason(it)}) · 앱에 든 목록으로 읽습니다")
         }
-        try {
-          if (connection.responseCode != 200) error("HTTP ${connection.responseCode}")
-          val body = connection.inputStream.bufferedReader().use { it.readText() }
-          val aliases = JSONObject(body).getJSONArray("aliases")
-          val set = LinkedHashSet<String>()
-          for (i in 0 until aliases.length()) {
-            val t = aliases.getJSONObject(i).optString("title").replace('\n', ' ').trim()
-            if (t.isNotEmpty()) set.add(t)
-          }
-          if (set.size < 100) error("only ${set.size} titles")
-          file.writeText(set.joinToString("\n"))
-        } finally {
-          connection.disconnect()
-        }
-      }.onFailure { Log.w(TAG, "could not refresh titles", it) }
     }
-    // an older copy is better than nothing when the phone is offline
-    if (!file.exists()) return null
-    return TitleIndex(file.readLines().filter { it.isNotBlank() })
+    // an older copy is still worth having when the phone is offline
+    val online = if (file.exists()) runCatching { file.readLines() }.getOrDefault(emptyList()) else emptyList()
+    val all = (bundled + online).filter { it.isNotBlank() }
+    return if (all.isEmpty()) null else TitleIndex(all)
+  }
+
+  private fun fetchTitles(): Set<String> {
+    val connection = (URL(TITLES_URL).openConnection() as HttpURLConnection).apply {
+      connectTimeout = 10_000
+      readTimeout = 20_000
+      setRequestProperty("Accept", "application/json")
+      setRequestProperty("User-Agent", "carol-live/${Updates.currentVersion} (Android)")
+    }
+    try {
+      val code = connection.responseCode
+      if (code != 200) error("HTTP $code")
+      val body = connection.inputStream.bufferedReader().use { it.readText() }
+      val aliases = JSONObject(body).getJSONArray("aliases")
+      val set = LinkedHashSet<String>()
+      for (i in 0 until aliases.length()) {
+        val t = aliases.getJSONObject(i).optString("title").replace('\n', ' ').trim()
+        if (t.isNotEmpty()) set.add(t)
+      }
+      if (set.size < 100) error("곡이 ${set.size}개뿐")
+      return set
+    } finally {
+      connection.disconnect()
+    }
   }
 
   // ------------------------------------------------------------------ matching
