@@ -46,7 +46,7 @@ function saveLevel(p: Play, level: string) {
   }
 }
 
-function readPrefs(): { mode?: Mode; background?: boolean } {
+function readPrefs(): { mode?: Mode; background?: boolean; songCard?: boolean } {
   try {
     return JSON.parse(localStorage.getItem(PREFS_KEY) ?? "{}") ?? {};
   } catch {
@@ -72,6 +72,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
   const preview = useRef<HTMLCanvasElement>(null);
   const [mode, setMode] = useState<Mode>(() => (readPrefs().mode === "legacy" ? "legacy" : "card"));
   const [background, setBackground] = useState(() => readPrefs().background !== false);
+  const [songCard, setSongCard] = useState(() => readPrefs().songCard !== false);
   const [y, setY] = useState(CARD.defaultY);
   const [align, setAlign] = useState(0.55);
   const [zoom, setZoom] = useState(1);
@@ -97,11 +98,11 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
 
   useEffect(() => {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ mode, background }));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ mode, background, songCard }));
     } catch {
       // only a convenience
     }
-  }, [mode, background]);
+  }, [mode, background, songCard]);
 
   // fonts for every text on the overlay (title, name, dan) before the first draw
   useEffect(() => {
@@ -137,8 +138,8 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     if (!fonts) return null;
     return mode === "card"
       ? cardLayout(shown, images, y, { align, zoom })
-      : legacyLayout(shown, profile ?? null, images, { background, align, zoom });
-  }, [fonts, mode, shown, images, y, profile, background, align, zoom]);
+      : legacyLayout(shown, profile ?? null, images, { background, songCard, align, zoom });
+  }, [fonts, mode, shown, images, y, profile, background, songCard, align, zoom]);
 
   const paint = useCallback(() => {
     const c = preview.current;
@@ -261,7 +262,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
           <span className="crl-label">레이아웃</span>
           <div className="nudges" role="group" aria-label="레이아웃">
             <button type="button" className={chip(mode === "card")} aria-pressed={mode === "card"} disabled={busy} onClick={() => setMode("card")}>
-              곡 카드
+              곡 카드만
             </button>
             <button type="button" className={chip(mode === "legacy")} aria-pressed={mode === "legacy"} disabled={busy} onClick={() => setMode("legacy")}>
               레거시
@@ -298,10 +299,13 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
                 <button type="button" className={chip(background)} aria-pressed={background} disabled={busy} onClick={() => setBackground((b) => !b)}>
                   파란 배경
                 </button>
+                <button type="button" className={chip(songCard)} aria-pressed={songCard} disabled={busy} onClick={() => setSongCard((v) => !v)}>
+                  곡 카드
+                </button>
               </div>
               {profile === null && (
                 <p className="crl-helper">
-                  프로필이 아직 없어서 곡 카드만 들어감. <a {...link("/maimai")}>maimai 메뉴</a>에서 북마크를 새로 등록하고 기록 페이지에서 한 번
+                  프로필이 아직 없어서 프로필 카드는 빠짐. <a {...link("/maimai")}>maimai 메뉴</a>에서 북마크를 새로 등록하고 기록 페이지에서 한 번
                   누르면 프로필 카드가 같이 나옴.
                 </p>
               )}

@@ -62,34 +62,41 @@ const LEGACY = {
 };
 
 export interface LegacyOptions extends FootageOptions {
-  /** the blue panels behind the two cards; without them the cards float on full-screen footage */
+  /** the blue panels behind the cards; without them the cards float on full-screen footage */
   background: boolean;
+  /** the song card on top; without it only the result lettering is up there (and no top panel) */
+  songCard: boolean;
 }
 
 /** the old layout: song card on top, profile card at the bottom, optionally on blue panels */
 export function legacyLayout(play: Play, profile: MaimaiProfile | null, images: CardImages, opts: LegacyOptions): ShortsLayout {
   const overlay = canvas(SHORTS.width, SHORTS.height);
   const ctx = overlay.getContext("2d")!;
+  const top = opts.songCard;
   if (opts.background) {
-    panel(ctx, LEGACY.title.y, LEGACY.title.h, [0, 0, 8, 8]);
+    if (top) panel(ctx, LEGACY.title.y, LEGACY.title.h, [0, 0, 8, 8]);
     // the bottom panel has an offset shadow; only its top edge is inside the frame
     ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
     roundRect(ctx, 4.6, LEGACY.bottom.y + 9.2, SHORTS.width, LEGACY.bottom.h, [9.2, 9.2, 0, 0]);
     ctx.fill();
     panel(ctx, LEGACY.bottom.y, LEGACY.bottom.h, [9.2, 9.2, 0, 0]);
   }
-  ctx.save();
-  ctx.translate(CARD.x, LEGACY.cardY);
-  drawSongCard(ctx, play, images);
-  ctx.restore();
-  drawStats(ctx, play, (opts.background ? LEGACY.title.h : LEGACY.cardY + CARD.height + CARD.shadow) + STATS_GAP);
+  if (top) {
+    ctx.save();
+    ctx.translate(CARD.x, LEGACY.cardY);
+    drawSongCard(ctx, play, images);
+    ctx.restore();
+  }
+  drawStats(ctx, play, !top ? TOP_SAFE : (opts.background ? LEGACY.title.h : LEGACY.cardY + CARD.height + CARD.shadow) + STATS_GAP);
   if (profile) {
     ctx.save();
     ctx.translate(PROFILE.x, PROFILE.y);
     drawProfileCard(ctx, profile, images);
     ctx.restore();
   }
-  return { footage: opts.background ? LEGACY.footage : FULL, align: opts.align, zoom: opts.zoom, overlay };
+  // without the top panel the footage runs from the top of the frame down to the bottom panel
+  const window = top ? LEGACY.footage : { x: 0, y: 0, w: SHORTS.width, h: LEGACY.footage.y + LEGACY.footage.h };
+  return { footage: opts.background ? window : FULL, align: opts.align, zoom: opts.zoom, overlay };
 }
 
 function panel(ctx: Ctx, y: number, h: number, radius: number[]) {

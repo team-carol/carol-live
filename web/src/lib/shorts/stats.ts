@@ -1,5 +1,5 @@
 // The result written on the footage itself: achievement at the top-left, rank and FC / sync marks at the
-// top-right. Lettering as in the mai-log shorts (pastel rainbow for SSS and AP, green FC), sized for a 1080 frame.
+// top-right, all at one size. Lettering as in the mai-log shorts (pastel rainbow for SSS and AP, green FC).
 import { achievementText, markOf, rankLabel } from "../maimaiLabels.ts";
 import type { Play } from "../songs.ts";
 import { CAP, outlined, type Ctx, type Paint, type Stops } from "./draw.ts";
@@ -25,7 +25,7 @@ const MARK: Record<string, Look> = {
 const rankLook = (label: string | null) => (label && RANK[label.replace("+", "")]) || RANK.other;
 const markLook = (label: string) => MARK[label.replace("+", "")] ?? MARK.sync;
 
-export const STATS = { margin: 50, size: 114, achievement: 84, gap: 25, stroke: 7.5, drop: 8 };
+export const STATS = { margin: 44, size: 78, achievement: 78, gap: 20, stroke: 6, drop: 6 };
 
 /** [top] is where the upper edge of the lettering goes; the footage should be free below it */
 export function drawStats(ctx: Ctx, play: Play, top: number, left = STATS.margin, right = 1080 - STATS.margin) {
@@ -48,8 +48,8 @@ export function drawStats(ctx: Ctx, play: Play, top: number, left = STATS.margin
     outlined(ctx, ach, left, top + line / 2, {
       size: STATS.achievement,
       ...rankLook(rank),
-      width: STATS.stroke * 0.8,
-      drop: STATS.drop * 0.8,
+      width: STATS.stroke,
+      drop: STATS.drop,
     });
   }
 }
