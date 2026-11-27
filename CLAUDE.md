@@ -41,7 +41,7 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 - `web/src/lib/chapters.ts`: 곡 목록 → 유튜브 설명란 챕터 (0:00 시작, 3개 이상, 10초 이상 규칙)
 - `web/src/lib/shorts/`: 곡 구간 → 쇼츠 mp4. 수치·색·벡터는 전부 Figma mai-log 파일에서 옴
   - `layout.ts`: 레이아웃(`cardLayout` 곡 카드만 / `legacyLayout` 예전 레이아웃, 파란 배경 선택)과 `drawFrame`. 미리보기와 인코더가 같은 함수로 그림
-  - `card.ts`(곡 카드, `card`/`legacy` 스타일), `profile.ts`(프로필 카드: 레이팅 틀은 Figma, 단·클래스는 maimai DX NET 이미지이고 못 받을 때만 Figma 배지), `draw.ts`(공통 캔버스 도구)
+  - `card.ts`(곡 카드: 자켓·난이도·ST/DX·곡명·레벨), `stats.ts`(영상 위 글자: 달성률 왼쪽 위, 랭크·마크 오른쪽 위), `profile.ts`(프로필 카드: 레이팅 틀은 Figma, 단·클래스는 maimai DX NET 이미지이고 못 받을 때만 Figma 배지), `draw.ts`(공통 캔버스 도구)
   - `images.ts`: maimai DX NET 이미지 경로와 번호 → 단/클래스/레이팅 색 (순수 함수, node 테스트)
   - `render.ts`: mediabunny로 디코드 → 오버레이 얹기 → H.264 인코드, 오디오는 복사. 편집 화면에서 필요할 때만 불러옴
 - `web/src/lib/maimaiLabels.ts`: 난이도·랭크·FC/AP 라벨과 게임 색(`@team-carol/design-system/game`). node 테스트에서도 불러오게 번들러 전용 import 금지

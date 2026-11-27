@@ -1,18 +1,10 @@
-// Which maimai DX NET images a play's card uses, as paths on our own server (/api/maimai/img/…).
+// Which maimai DX NET images the shorts cards use, as paths on our own server (/api/maimai/img/…).
 // Pure (no DOM) so node tests can load it.
 import type { Play } from "../songs.ts";
 
 export const MAIMAI_IMG = "/api/maimai/img/";
 
-export type CardImageKey = "jacket" | "kind" | "rank" | "fc" | "sync" | "icon" | "dan" | "cls";
-
-/** playlog/<name>.png: short spellings from older imports -> the file names maimai DX NET uses */
-const PLAYLOG_NAME: Record<string, string> = { sssp: "sssplus", ssp: "ssplus", sp: "splus", app: "applus", fcp: "fcplus", fsdp: "fsdplus", fsp: "fsplus" };
-
-function playlog(name: string | null | undefined): string | undefined {
-  if (!name || !/^[a-z]{1,10}$/.test(name)) return undefined;
-  return `${MAIMAI_IMG}playlog/${PLAYLOG_NAME[name] ?? name}.png`;
-}
+export type CardImageKey = "jacket" | "kind" | "icon" | "dan" | "cls";
 
 export function cardImageUrls(
   play: Play,
@@ -23,9 +15,6 @@ export function cardImageUrls(
   const out: Partial<Record<CardImageKey, string>> = {
     jacket: jacket && `${MAIMAI_IMG}Music/${jacket}.png`,
     kind: d.kind === "dx" ? `${MAIMAI_IMG}music_dx.png` : d.kind === "std" ? `${MAIMAI_IMG}music_standard.png` : undefined,
-    rank: playlog(d.rank),
-    fc: playlog(d.fc),
-    sync: playlog(d.sync),
     icon: profile?.icon && /^[0-9a-f]{8,32}$/.test(profile.icon) ? `${MAIMAI_IMG}Icon/${profile.icon}.png` : undefined,
     dan: profile?.courseImg && /^course_rank_[0-9A-Za-z]{1,24}$/.test(profile.courseImg) ? `${MAIMAI_IMG}course/${profile.courseImg}.png` : undefined,
     cls: profile?.classImg && /^class_rank_s_[0-9A-Za-z]{1,24}$/.test(profile.classImg) ? `${MAIMAI_IMG}class/${profile.classImg}.png` : undefined,

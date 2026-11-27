@@ -9,21 +9,12 @@ test("card images go through our server, by the names maimai DX NET uses", () =>
   const urls = cardImageUrls(
     play({ kind: "dx", rank: "sssplus", fc: "fcplus", sync: "fsd", jacket: "https://maimaidx-eng.com/maimai-mobile/img/Music/7bf12d9c7382a32c.png" }),
   );
-  assert.deepEqual(urls, {
-    jacket: "/api/maimai/img/Music/7bf12d9c7382a32c.png",
-    kind: "/api/maimai/img/music_dx.png",
-    rank: "/api/maimai/img/playlog/sssplus.png",
-    fc: "/api/maimai/img/playlog/fcplus.png",
-    sync: "/api/maimai/img/playlog/fsd.png",
-  });
+  // rank and marks are lettering on the footage, not images
+  assert.deepEqual(urls, { jacket: "/api/maimai/img/Music/7bf12d9c7382a32c.png", kind: "/api/maimai/img/music_dx.png" });
 });
 
-test("older short spellings map to the real file names; missing or odd values are left out", () => {
-  assert.deepEqual(cardImageUrls(play({ kind: "std", rank: "sssp", fc: "app", sync: null })), {
-    kind: "/api/maimai/img/music_standard.png",
-    rank: "/api/maimai/img/playlog/sssplus.png",
-    fc: "/api/maimai/img/playlog/applus.png",
-  });
+test("missing or odd values are left out", () => {
+  assert.deepEqual(cardImageUrls(play({ kind: "std" })), { kind: "/api/maimai/img/music_standard.png" });
   assert.deepEqual(cardImageUrls(play({ rank: "../x", fc: "FC", jacket: "https://example.com/a.png" })), {});
   assert.deepEqual(cardImageUrls({ ...play({}), details: null as never }), {});
 });

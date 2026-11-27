@@ -6,6 +6,7 @@ import { CARD, drawSongCard, type CardImages } from "./card.ts";
 import { canvas, roundRect, type Ctx } from "./draw.ts";
 import { cardImageUrls, type CardImageKey } from "./images.ts";
 import { PROFILE, drawProfileCard } from "./profile.ts";
+import { drawStats } from "./stats.ts";
 
 export const SHORTS = { width: 1080, height: 1920 };
 export const CARD_MAX_Y = SHORTS.height - CARD.height - CARD.shadow;
@@ -22,6 +23,10 @@ export interface ShortsLayout {
 }
 
 const FULL = { x: 0, y: 0, w: SHORTS.width, h: SHORTS.height };
+/** space between a card or panel and the lettering on the footage */
+const STATS_GAP = 33;
+/** below the icons the Shorts player shows at the top */
+const TOP_SAFE = 130;
 
 /** how the footage sits in its box */
 export interface FootageOptions {
@@ -33,18 +38,26 @@ export interface FootageOptions {
 export function cardLayout(play: Play, images: CardImages, y: number, footage: FootageOptions): ShortsLayout {
   const overlay = canvas(SHORTS.width, SHORTS.height);
   const ctx = overlay.getContext("2d")!;
+  ctx.save();
   ctx.translate(CARD.x, y);
-  drawSongCard(ctx, play, images, "card");
+  drawSongCard(ctx, play, images);
+  ctx.restore();
+  // the result goes on the footage: right under a card in the upper half, else at the top of the frame
+  const below = y + CARD.height + CARD.shadow + STATS_GAP;
+  drawStats(ctx, play, y + CARD.height / 2 < SHORTS.height / 2 ? below : TOP_SAFE);
   return { footage: FULL, ...footage, overlay };
 }
 
-// Frame 30 of the mai-log Figma file
+// Frame 30 of the mai-log Figma file. The song card lost its bottom row, so the top panel is shorter than
+// in the frame (same 68.8 above and below the card) and the footage starts higher.
+const LEGACY_TITLE_H = 68.8 * 2 + CARD.height;
 const LEGACY = {
   panel: "#9bd5fc",
   border: "#2b2b2b",
-  title: { y: 0, h: 393 },
+  title: { y: 0, h: LEGACY_TITLE_H },
   cardY: 68.8,
-  footage: { x: 0, y: 373, w: 1080, h: 1135 },
+  // tucked 20 px under the top panel and 16 px under the bottom one, as in the frame
+  footage: { x: 0, y: LEGACY_TITLE_H - 20, w: 1080, h: 1508 - (LEGACY_TITLE_H - 20) },
   bottom: { y: 1492, h: 428 },
 };
 
@@ -67,8 +80,9 @@ export function legacyLayout(play: Play, profile: MaimaiProfile | null, images: 
   }
   ctx.save();
   ctx.translate(CARD.x, LEGACY.cardY);
-  drawSongCard(ctx, play, images, "legacy");
+  drawSongCard(ctx, play, images);
   ctx.restore();
+  drawStats(ctx, play, (opts.background ? LEGACY.title.h : LEGACY.cardY + CARD.height + CARD.shadow) + STATS_GAP);
   if (profile) {
     ctx.save();
     ctx.translate(PROFILE.x, PROFILE.y);

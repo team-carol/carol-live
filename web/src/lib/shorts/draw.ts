@@ -38,34 +38,43 @@ export interface Outline {
   stroke: string;
   /** stroke width outside the letters */
   width: number;
-  /** colour of the hard shadow below; leave out for the usual 60% black */
+  /** solid colour of the hard shadow below; leave out for 60% black (over footage) */
   shadow?: string;
   drop: number;
-  align?: "left" | "center";
+  align?: "left" | "center" | "right";
 }
 
 /** capital letters / digits with an outer stroke and a hard shadow, centred on [cy]. Returns the text width. */
 export function outlined(ctx: Ctx, text: string, x: number, cy: number, o: Outline): number {
-  ctx.font = font(800, o.size);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-  ctx.lineJoin = "round";
-  ctx.lineWidth = o.width * 2;
+  const setup = (c: Ctx) => {
+    c.font = font(800, o.size);
+    c.textAlign = "left";
+    c.textBaseline = "alphabetic";
+    c.lineJoin = "round";
+    c.lineWidth = o.width * 2;
+  };
+  setup(ctx);
   const w = ctx.measureText(text).width;
-  const left = o.align === "center" ? x - w / 2 : x;
+  const left = o.align === "center" ? x - w / 2 : o.align === "right" ? x - w : x;
   const y = cy + (o.size * CAP) / 2;
-  const shadow = o.shadow ?? SHADOW;
   if (o.shadow) {
-    ctx.strokeStyle = shadow;
+    ctx.strokeStyle = o.shadow;
     ctx.strokeText(text, left, y + o.drop);
-    ctx.fillStyle = shadow;
+    ctx.fillStyle = o.shadow;
     ctx.fillText(text, left, y + o.drop);
   } else {
-    // translucent shadow: stroke only (it covers the letters too), so it is not laid down twice
-    ctx.strokeStyle = shadow;
-    ctx.lineWidth = o.width * 2 + 1;
-    ctx.strokeText(text, left, y + o.drop);
-    ctx.lineWidth = o.width * 2;
+    // translucent shadow: the whole outlined shape once, so stroke and fill do not add up
+    const m = o.width + 2;
+    const layer = canvas(w + m * 2, o.size * 1.4 + m * 2);
+    const c = layer.getContext("2d")!;
+    setup(c);
+    c.strokeStyle = c.fillStyle = "#000";
+    c.strokeText(text, m, m + o.size);
+    c.fillText(text, m, m + o.size);
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(layer, left - m, y - o.size - m + o.drop);
+    ctx.restore();
   }
   ctx.strokeStyle = o.stroke;
   ctx.strokeText(text, left, y);
