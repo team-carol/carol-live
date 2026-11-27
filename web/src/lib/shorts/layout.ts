@@ -25,6 +25,8 @@ export interface ShortsLayout {
   footage: Rect;
   /** which part shows when the footage is taller than the box: 0 = top, 1 = bottom */
   align: number;
+  /** the same sideways: 0 = left, 1 = right */
+  alignX: number;
   /** 1 = just covers the box; larger zooms in (and leaves more room to move it up and down) */
   zoom: number;
   /** 1080×1920, transparent where the footage shows */
@@ -107,7 +109,7 @@ export function buildLayout(play: Play, profile: MaimaiProfile | null, images: C
   if (ach && a) ach.draw(ctx, a.anchor.x, a.anchor.y);
   if (mk && m) mk.draw(ctx, m.anchor.x, m.anchor.y);
 
-  return { footage: geo.footage, align: design.footage.align, zoom: design.footage.zoom, overlay, boxes };
+  return { footage: geo.footage, align: design.footage.align, alignX: design.footage.alignX, zoom: design.footage.zoom, overlay, boxes };
 }
 
 /** how far each card can go down before it leaves the frame */
@@ -145,7 +147,7 @@ export function drawFrame(
   }
   if (sw > 0 && sh > 0) {
     const s = Math.max(f.w / sw, f.h / sh) * Math.max(1, layout.zoom);
-    draw(f.x + (f.w - sw * s) / 2, f.y + (f.h - sh * s) * layout.align, sw * s, sh * s);
+    draw(f.x + (f.w - sw * s) * layout.alignX, f.y + (f.h - sh * s) * layout.align, sw * s, sh * s);
   }
   if (!full) ctx.restore();
   ctx.drawImage(layout.overlay, 0, 0);

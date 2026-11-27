@@ -30,10 +30,14 @@ import org.json.JSONObject
  * Experimental: finds out which song is being played while a session runs, by reading the title off the
  * cabinet's upper monitor in the picture that is being streamed.
  *
- * Every few seconds one frame is taken from the stream ([LiveSession.grabFrame]), the text in its upper
- * part is recognized on this phone (ML Kit, Japanese model: kana, kanji and Latin) and each line is compared
- * with the list of song titles. A title counts once two reads in a row agree. Reading is rare and off the
- * main thread, so it costs little next to encoding; taking the frame copies it out of the GPU once per read.
+ * Every few seconds one frame is taken from the stream ([LiveSession.grabFrame]) and the text in its upper
+ * part is recognized on this phone (ML Kit, Japanese model: kana, kanji and Latin). While a song is played
+ * the upper monitor shows a panel: the difficulty, under it the title in a bar, under that "ACHIEVEMENT" and
+ * the percentage. Only a read that has that panel counts, and only the lines inside it are compared with the
+ * list of song titles ([TitleIndex.read]); the song select screen and the player's own title plate (which is
+ * often a song title) are left out that way. A title counts once two reads in a row agree. Reading is rare
+ * and off the main thread, so it costs little next to encoding; taking the frame copies it out of the GPU
+ * once per read.
  *
  * Everything here is wrapped so that a failure only turns the readout off: the stream must not care.
  * Driven from the main thread by [LiveSession] once a second ([tick]).
@@ -66,7 +70,7 @@ object SongSpotter {
   /** how much the part of the picture that is read is enlarged first */
   private const val ENLARGE = 2
   /** this many reads in a row without the title and the song is over */
-  private const val MISSES_TO_CLEAR = 5
+  private const val MISSES_TO_CLEAR = 3
 
   private val ui = Handler(Looper.getMainLooper())
   private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "song-spotter").apply { isDaemon = true } }
@@ -198,8 +202,7 @@ object SongSpotter {
   // ------------------------------------------------------------------ one read (worker thread)
 
   private fun read(frame: Bitmap, index: TitleIndex) {
-    var lines = 0
-    var match: Match? = null
+    var reading = Reading(0, false, null)
     var region: Bitmap? = null
     var enlarged: Bitmap? = null
     try {
@@ -210,27 +213,29 @@ object SongSpotter {
       enlarged = Bitmap.createScaledBitmap(region, region.width * ENLARGE, region.height * ENLARGE, true)
       val client = recognizer ?: return
       val text = Tasks.await(client.process(InputImage.fromBitmap(enlarged, 0)), 6, TimeUnit.SECONDS)
-      val read = text.textBlocks.flatMap { block -> block.lines.map { it.text } }
-      lines = read.size
-      match = index.best(read)
+      val seen = text.textBlocks.flatMap { block ->
+        block.lines.mapNotNull { line -> line.boundingBox?.let { SeenLine(line.text, it.left, it.top, it.right, it.bottom) } }
+      }
+      reading = index.read(seen)
     } catch (e: Exception) {
       Log.w(TAG, "read failed", e)
     } finally {
       enlarged?.recycle()
       region?.recycle()
       frame.recycle()
-      val seen = lines
-      val result = match
-      ui.post { onRead(seen, result) }
+      val result = reading
+      ui.post { onRead(result) }
     }
   }
 
-  private fun onRead(lines: Int, match: Match?) {
+  private fun onRead(reading: Reading) {
     readSince = 0L
     if (status == Status.OFF) return
-    lastRead = when {
-      match == null -> "글자 ${lines}줄 · 곡명 없음"
-      else -> "글자 ${lines}줄 · \"${match.line.take(24)}\" → ${match.title.take(24)} ${(match.score * 100).toInt()}%" +
+    val match = reading.match
+    lastRead = "글자 ${reading.lines}줄 · " + when {
+      !reading.playScreen -> "플레이 화면 아님"
+      match == null -> "곡명 줄을 찾지 못함"
+      else -> "\"${match.line.take(24)}\" → ${match.title.take(24)} ${(match.score * 100).toInt()}%" +
         if (match.accepted) "" else " (불확실)"
     }
     val hit = match?.takeIf { it.accepted }?.title
@@ -366,12 +371,55 @@ object SongSpotter {
 
   class Match(val line: String, val title: String, val score: Float, val accepted: Boolean)
 
+  /** a line of text in the picture with its box (pixels of the picture that was read) */
+  class SeenLine(val text: String, val left: Int, val top: Int, val right: Int, val bottom: Int) {
+    val key: String = TitleIndex.normalize(text)
+    val height: Int get() = bottom - top
+    val centerX: Float get() = (left + right) / 2f
+    val centerY: Float get() = (top + bottom) / 2f
+  }
+
+  /** what one read found: how many lines, whether the play panel was there, and the title in it if any */
+  class Reading(val lines: Int, val playScreen: Boolean, val match: Match?)
+
   /** song titles prepared for comparing with what was read */
   class TitleIndex(titles: List<String>) {
     private class Entry(val title: String, val key: String)
 
     private val entries: List<Entry> = titles.map { Entry(it, normalize(it)) }.filter { it.key.isNotEmpty() }.distinctBy { it.key }
     val size: Int get() = entries.size
+
+    /**
+     * Finds the play panel and the title in it. The panel is a difficulty word with "ACHIEVEMENT" or the
+     * percentage a little below it; the title is a line between the two, not left of the difficulty (the
+     * jacket is there, often with the title printed on it). Without the panel nothing is matched.
+     */
+    fun read(lines: List<SeenLine>): Reading {
+      val below = lines.filter { isAchievementLabel(it.key) || isPercent(it.text) }
+      var difficulty: SeenLine? = null
+      var floor: SeenLine? = null
+      var gap = Float.MAX_VALUE
+      for (d in lines) {
+        if (!isDifficulty(d.key)) continue
+        for (b in below) {
+          val g = (b.top - d.bottom).toFloat()
+          if (g < -0.3f * d.height || g > 8f * d.height || b.centerX < d.left - d.height) continue
+          if (g < gap) {
+            gap = g
+            difficulty = d
+            floor = b
+          }
+        }
+      }
+      val d = difficulty ?: return Reading(lines.size, false, null)
+      val b = floor ?: return Reading(lines.size, false, null)
+      val inPanel = lines.filter {
+        it !== d && it !== b && !isAchievementLabel(it.key) && !isPercent(it.text) &&
+          it.centerY > d.bottom - 0.25f * d.height && it.centerY < b.top + 0.25f * b.height &&
+          it.centerX >= d.left - d.height
+      }
+      return Reading(lines.size, true, best(inPanel.map { it.text }))
+    }
 
     /** the line that looks most like a title, and whether that is sure enough to believe */
     fun best(lines: List<String>): Match? {
@@ -407,41 +455,56 @@ object SongSpotter {
     }
 
     /**
-     * How alike a read line and a title are, 0..1. Long titles scroll through the bar, so a line that is
-     * clearly shorter than the title is also compared with the best-fitting part of it (a little less trusted).
+     * How alike a read line and a title are, 0..1. A title too long for its bar may show only in part, so a
+     * long read that covers at least half of a longer title is also compared with the best-fitting part of
+     * it (a little less trusted). Short reads are never matched that way: a stray word like "LASTER" (the
+     * cut-off "MASTER" of the song select screen) is inside "Galaxy Blaster", and was taken for it.
      */
     private fun score(read: String, title: String): Float {
       val whole = 1f - distance(read, title, anywhere = false).toFloat() / maxOf(read.length, title.length)
-      if (read.length < 6 || title.length < read.length + 3) return whole
+      if (read.length < 8 || read.length * 2 < title.length || title.length < read.length + 3) return whole
       val part = (1f - distance(read, title, anywhere = true).toFloat() / read.length) * 0.92f
       return maxOf(whole, part)
-    }
-
-    /** edit distance; with [anywhere], from [a] to the closest stretch inside [b] */
-    private fun distance(a: String, b: String, anywhere: Boolean): Int {
-      var prev = IntArray(b.length + 1) { if (anywhere) 0 else it }
-      var cur = IntArray(b.length + 1)
-      for (i in 1..a.length) {
-        cur[0] = i
-        val ca = a[i - 1]
-        for (j in 1..b.length) {
-          val swap = prev[j - 1] + if (ca == b[j - 1]) 0 else 1
-          cur[j] = minOf(swap, prev[j] + 1, cur[j - 1] + 1)
-        }
-        val t = prev
-        prev = cur
-        cur = t
-      }
-      return if (anywhere) prev.min() else prev[b.length]
     }
 
     companion object {
       /** words the game shows around the title, which are not it ("Credits" is also a song) */
       private val SCREEN_WORD = Regex("^(track\\d*|credits?\\d*|basic|advanced|expert|master|remaster|achievement|lv\\d*|ver.*|dxscore|freeplay)$")
       private val NUMBER = Regex("^[\\d.,%]+$")
+      private val DIFFICULTIES = listOf("basic", "advanced", "expert", "master", "remaster")
+      /** the achievement as the panel shows it ("100.8696%"); O for 0 is a common misread */
+      private val PERCENT = Regex("^[\\doO]{2,3}[.,][\\doO]{2,4}%?$")
 
       private fun isScreenWord(key: String): Boolean =
         SCREEN_WORD.matches(key) || key.contains("achievement") || (NUMBER.matches(key) && (key.contains('.') || key.contains('%')))
+
+      private fun isDifficulty(key: String): Boolean =
+        DIFFICULTIES.any { (key.startsWith(it) && key.length <= it.length + 4) || similarity(key, it) >= 0.75f }
+
+      private fun isAchievementLabel(key: String): Boolean = key.length >= 7 && similarity(key, "achievement") >= 0.7f
+
+      private fun isPercent(text: String): Boolean = PERCENT.matches(text.replace(" ", ""))
+
+      private fun similarity(a: String, b: String): Float =
+        if (a.isEmpty() || b.isEmpty()) 0f else 1f - distance(a, b, anywhere = false).toFloat() / maxOf(a.length, b.length)
+
+      /** edit distance; with [anywhere], from [a] to the closest stretch inside [b] */
+      private fun distance(a: String, b: String, anywhere: Boolean): Int {
+        var prev = IntArray(b.length + 1) { if (anywhere) 0 else it }
+        var cur = IntArray(b.length + 1)
+        for (i in 1..a.length) {
+          cur[0] = i
+          val ca = a[i - 1]
+          for (j in 1..b.length) {
+            val swap = prev[j - 1] + if (ca == b[j - 1]) 0 else 1
+            cur[j] = minOf(swap, prev[j] + 1, cur[j - 1] + 1)
+          }
+          val t = prev
+          prev = cur
+          cur = t
+        }
+        return if (anywhere) prev.min() else prev[b.length]
+      }
 
       /** same letters in the same form: full-width to half-width, lower case, no spaces or marks */
       fun normalize(text: String): String {
