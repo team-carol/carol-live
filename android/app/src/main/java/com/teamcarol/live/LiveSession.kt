@@ -2,6 +2,7 @@ package com.teamcarol.live
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
 import android.hardware.camera2.CaptureRequest
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
@@ -16,6 +17,7 @@ import android.view.SurfaceView
 import android.view.View
 import com.pedro.common.ConnectChecker
 import com.pedro.common.StreamingStatsReport
+import com.pedro.encoder.input.gl.render.filters.`object`.ImageFilterRender
 import com.pedro.encoder.input.sources.audio.MicrophoneSource
 import com.pedro.encoder.input.sources.video.Camera2Source
 import com.pedro.library.base.recording.RecordController
@@ -88,6 +90,9 @@ object LiveSession : ConnectChecker {
   /** button clicks per second from the mic, sliced per recording for song splitting on the web */
   private var gameActivity: GameActivity? = null
 
+  /** the recognized song drawn into the picture (stream, recording and preview alike), when that is asked for */
+  private var songOverlay: ImageFilterRender? = null
+
   private var userStopped = false
   private var recordFile: File? = null
   private var recordStartedWall = 0L
@@ -154,6 +159,53 @@ object LiveSession : ConnectChecker {
     mic = null
     prepared = false
     lockedRange = null
+    // filters go with the pipeline
+    songOverlay = null
+  }
+
+  // ------------------------------------------------------------------ picture access for SongSpotter
+
+  /** size of the picture as it is encoded (after rotation) */
+  val frameWidth: Int
+    get() = if (settings.orientation == StreamOrientation.PORTRAIT) activeResolution.height else activeResolution.width
+  val frameHeight: Int
+    get() = if (settings.orientation == StreamOrientation.PORTRAIT) activeResolution.width else activeResolution.height
+
+  /**
+   * Asks for one frame of the picture as it is encoded. [onFrame] gets it on the render thread and owns
+   * the bitmap. False when there is no pipeline to take it from.
+   */
+  fun grabFrame(onFrame: (Bitmap) -> Unit): Boolean {
+    val s = stream ?: return false
+    if (!prepared) return false
+    return try {
+      s.getGlInterface().takePhoto { bitmap -> if (bitmap != null) onFrame(bitmap) }
+      true
+    } catch (e: Exception) {
+      Log.w(TAG, "grabFrame failed", e)
+      false
+    }
+  }
+
+  /** Draws [card] into the picture at [x], [y] with size [w] × [h], all in percent of the frame. Null removes it. */
+  fun setSongOverlay(card: Bitmap?, x: Float, y: Float, w: Float, h: Float) {
+    val gl = stream?.getGlInterface() ?: return
+    try {
+      if (card == null) {
+        songOverlay?.let { gl.removeFilter(it) }
+        songOverlay = null
+        return
+      }
+      val filter = songOverlay ?: ImageFilterRender().also {
+        gl.addFilter(it)
+        songOverlay = it
+      }
+      filter.setImage(card)
+      filter.setScale(w, h)
+      filter.setPosition(x, y)
+    } catch (e: Exception) {
+      Log.w(TAG, "song overlay failed", e)
+    }
   }
 
   private fun prepare(): Boolean {
@@ -458,6 +510,7 @@ object LiveSession : ConnectChecker {
       s.sampleTemp(PhoneStatus.read(app).tempC)
       LiveService.refresh()
     }
+    SongSpotter.tick(app, settings, isActive)
     listener?.onChanged()
   }
 

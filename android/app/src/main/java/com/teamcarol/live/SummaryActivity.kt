@@ -64,6 +64,15 @@ class SummaryActivity : AppCompatActivity() {
         "${f.name} · ${clock(f.durationMs)} · ${String.format(Locale.US, "%.1fGB", size / 1024.0 / 1024 / 1024)}"
       }
 
+    // kept in memory only: there right after the session, gone once the app has been closed
+    val songs = SongSpotter.history
+    if (songs.isNotEmpty()) {
+      findViewById<TextView>(R.id.sum_songs).apply {
+        visibility = View.VISIBLE
+        text = "인식한 곡 (실험)\n" + songs.joinToString("\n") { "${clock(it.atMs)} · ${it.title}" }
+      }
+    }
+
     val upload = findViewById<TextView>(R.id.sum_upload)
     val uploadNow = findViewById<Button>(R.id.sum_upload_now)
     val paired = UploadConfig.paired(this)

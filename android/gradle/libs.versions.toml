@@ -5,10 +5,13 @@ appcompat = "1.6.1"
 work = "2.10.0"
 # same as RootEncoder
 coroutines = "1.11.0"
+# on-device text recognition with the Japanese model (kana, kanji, Latin) for SongSpotter
+mlkit-text-japanese = "16.0.1"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-work = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+mlkit-text-japanese = { module = "com.google.mlkit:text-recognition-japanese", version.ref = "mlkit-text-japanese" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 
 [plugins]

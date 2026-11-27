@@ -45,6 +45,8 @@ class SettingsActivity : AppCompatActivity() {
   private lateinit var ytChannel: EditText
   private lateinit var ytTag: TextView
   private lateinit var swShowChat: SwitchCompat
+  private lateinit var swSongSpotting: SwitchCompat
+  private lateinit var swSongOverlay: SwitchCompat
 
   private val cameraInfo by lazy { BackCameraInfo(this) }
 
@@ -83,6 +85,10 @@ class SettingsActivity : AppCompatActivity() {
     ytChannel = findViewById(R.id.yt_channel)
     ytTag = findViewById(R.id.yt_tag)
     swShowChat = findViewById(R.id.sw_show_chat)
+    swSongSpotting = findViewById(R.id.sw_song_spotting)
+    swSongOverlay = findViewById(R.id.sw_song_overlay)
+    // the overlay shows what the reading finds, so it needs the reading
+    swSongSpotting.setOnCheckedChangeListener { _, on -> swSongOverlay.isEnabled = on }
 
     fill(SettingsStore.load(this))
     upServer.setText(UploadConfig.draftServer(this))
@@ -220,6 +226,9 @@ class SettingsActivity : AppCompatActivity() {
     rgRecordQuality.check(if (s.recordBitrateKbps > 0) R.id.rq_high else R.id.rq_same)
     ytChannel.setText(s.youtubeChannel)
     swShowChat.isChecked = s.showChat
+    swSongSpotting.isChecked = s.songSpotting
+    swSongOverlay.isChecked = s.songOverlay
+    swSongOverlay.isEnabled = s.songSpotting
     refreshHints()
   }
 
@@ -314,6 +323,8 @@ class SettingsActivity : AppCompatActivity() {
       recordBitrateKbps = if (rgRecordQuality.checkedRadioButtonId == R.id.rq_high) HIGH_RECORD_KBPS else 0,
       youtubeChannel = channel,
       showChat = swShowChat.isChecked,
+      songSpotting = swSongSpotting.isChecked,
+      songOverlay = swSongSpotting.isChecked && swSongOverlay.isChecked,
     )
     SettingsStore.save(this, settings)
     UploadConfig.saveDrafts(this, upServer.text.toString().trim().trimEnd('/'), upDevice.text.toString().trim())
