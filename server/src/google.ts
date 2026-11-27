@@ -107,7 +107,9 @@ export function consentUrl(env: GoogleEnv, redirectUri: string, state: string): 
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", SCOPE);
   url.searchParams.set("access_type", "offline");
-  url.searchParams.set("prompt", "consent");
+  // consent: always hands out a refresh token. select_account: shows the account list even with one session, and
+  // after it the list of that account's channels (brand accounts); without it Google goes straight to the default channel
+  url.searchParams.set("prompt", "consent select_account");
   url.searchParams.set("state", state);
   return url.toString();
 }
