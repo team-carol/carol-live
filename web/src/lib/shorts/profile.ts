@@ -7,10 +7,13 @@ import { INK, SHADOW, WHITE, canvas, font, paint, plate, roundRect, shadowText, 
 import { classOf, danOf, ratingTier, type ClassTier, type RatingTier } from "./images.ts";
 
 /** card box in the 1080×1920 frame; the bitmap is larger for the offset shadow */
-export const PROFILE = { x: 51, y: 1417, width: 978, height: 317, shadowX: 4.6, shadowY: 9.2 };
+/** the frame's card is 317 high; without the title bar (43.1 + the 15.9 gap under it) it is 258 */
+export const PROFILE = { x: 51, y: 1417, width: 978, height: 258, shadowX: 4.6, shadowY: 9.2 };
 
 /** the components are drawn at this scale in the frame */
 const K = 1.15;
+/** space between the rows of the card */
+const GAP = 15.89;
 
 const DAN_PATH =
   "M23.5519 2.46666C24.1717 0.973346 25.6295 0 27.2463 0H162.022C164.874 0 166.81 2.89926 165.717 5.53334L142.474 61.5333C141.855 63.0267 140.397 64 138.78 64H4.00414C1.15221 64 -0.783546 61.1007 0.309698 58.4667L23.5519 2.46666Z";
@@ -144,8 +147,9 @@ export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, images: { icon
   const x = pad + side + 17.25;
   let y = pad;
 
-  // name + rating at the top, badges in the middle, play count at the bottom (the frame's title bar is left out)
-  const nameW = 397.65;
+  // name + rating, badges, play count: the frame's rows and gaps without its title bar
+  // the name box takes what the rating (172.5) and its star (4.6 + 55.2) leave, as in the frame
+  const nameW = W - pad - x - 13.8 - 232.3;
   ctx.fillStyle = SHADOW;
   roundRect(ctx, x, y + 3.45, nameW, 64.4, 9.2);
   ctx.fill();
@@ -172,7 +176,7 @@ export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, images: { icon
   plate(ctx, STAR_SMALL, ratingX + 150 * K + 4.6, y + 4.6, K, "#f0da83", 24, undefined, 2);
 
   // dan and class: the site's badges at the row height, else the Figma ones
-  y = pad + (side - 64 * K) / 2;
+  y = pad + 64.4 + GAP;
   let cx = x;
   const badge = (img: ImageBitmap) => {
     const bw = (img.width / img.height) * 64 * K;
@@ -191,7 +195,7 @@ export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, images: { icon
 
   // play count: total / this version
   if (profile.playCount != null) {
-    y = pad + 228.8;
+    y = pad + side - 33;
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.font = font(400, 27.6);
