@@ -145,7 +145,10 @@ test("a stored design is cleaned: odd values fall back, the first version's sett
   assert.deepEqual(cleanDesign(JSON.parse(JSON.stringify(DEFAULT_DESIGN))), DEFAULT_DESIGN);
   const odd = cleanDesign({ scrim: 7, footage: { align: "x", zoom: 9 }, song: { style: "huge", y: -40 }, marks: { style: "text", scale: 100, pos: { x: 1 } }, achievement: { pos: { x: 99999, y: 12 } } });
   assert.equal(odd.scrim, 1);
-  assert.deepEqual(odd.footage, { align: 0.55, zoom: 2 });
+  assert.deepEqual(odd.footage, { align: 0.55, alignX: 0.5, zoom: 2 });
+  // a design stored before the footage could be moved sideways keeps it centred
+  assert.equal(cleanDesign({ footage: { align: 0.2, zoom: 1.5 } }).footage.alignX, 0.5);
+  assert.deepEqual(cleanDesign({ footage: { align: 0.2, alignX: 0.9, zoom: 1.5 } }).footage, { align: 0.2, alignX: 0.9, zoom: 1.5 });
   assert.deepEqual(odd.song, { show: true, style: "compact", y: 0 });
   assert.deepEqual(odd.marks, { show: true, style: "text", row: false, scale: 2, pos: null });
   assert.deepEqual(odd.achievement.pos, { x: 1080, y: 12 });

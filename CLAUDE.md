@@ -28,7 +28,7 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 | `Updates.kt` / `UpdateDialog.kt` | GitHub 최신 릴리스 확인(6시간 간격), 새 버전 안내 |
 | `GameActivity.kt` | 마이크 원음에서 초당 버튼 클릭 수를 셈 → 녹화별로 잘라 업로드 때 `analysis`로 보냄. `MicEffects`가 감지기 → 리미터 순서로 묶음 |
 | `ClickLimiter.kt` | 버튼 소리 줄이기 (끔/약/강). `tools/click-limiter.mjs`가 1:1 포트 |
-| `SongSpotter.kt` | 실험: 방송 중 위쪽 모니터의 곡명을 몇 초마다 읽음(ML Kit 일본어 모델, 폰 안에서만). 곡 목록(앱에 든 `assets/song_titles.txt` + 하루 한 번 받는 `maimai.team-carol.com/api/aliases`의 원제목)과 대조해 두 번 연속 같으면 확정. 안 되는 이유는 화면 정보 줄에 그대로 보여 줌. 화면은 `LiveSession.grabFrame`으로만 받고, 방송에 얹는 것도 `LiveSession.setSongOverlay`로만 함. 기본 꺼짐 |
+| `SongSpotter.kt` | 실험: 방송 중 위쪽 모니터의 곡명을 몇 초마다 읽음(ML Kit 일본어 모델, 폰 안에서만). 곡 목록(앱에 든 `assets/song_titles.txt` + 하루 한 번 받는 `maimai.team-carol.com/api/aliases`의 원제목)과 대조해 두 번 연속 같으면 확정. 플레이 판(난이도 글자 아래에 ACHIEVEMENT나 달성률)이 보일 때만, 그 사이에 있는 줄만 후보로 봄 (곡 선택 화면·칭호 오인식 방지). 안 되는 이유는 화면 정보 줄에 그대로 보여 줌. 화면은 `LiveSession.grabFrame`으로만 받고, 방송에 얹는 것도 `LiveSession.setSongOverlay`로만 함. 기본 꺼짐 |
 | `YouTubeChat.kt` | 방송 화면 유튜브 채팅. 서버 `/api/device/youtube/*`로 라이브 찾기·채팅 폴링. 화면이 보일 때만 돎 |
 
 ### server/src, web/src
@@ -41,7 +41,7 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 - `web/src/lib/songs.ts`: 초당 클릭 수로 곡 구간 나누기(`findSongs`) + maimai 기록을 시간으로 맞추기(`matchPlays`). 기준값은 `web/test/fixtures/analysis-58min.json`(실제 58분 방송)과 `test/songs.test.ts`로 고정됨. 바꾸면 테스트가 통과해야 함
 - `web/src/lib/chapters.ts`: 곡 목록 → 유튜브 설명란 챕터 (0:00 시작, 3개 이상, 10초 이상 규칙)
 - `web/src/lib/shorts/`: 곡 구간 → 쇼츠 mp4. 수치·색·벡터는 전부 Figma mai-log 파일에서 옴
-  - `design.ts`: 에디터가 바꾸는 설정(`ShortsDesign`: 요소별 표시·모양·위치·크기, 파란 배경, 그라데이션 세기, 영상 높이·확대), 프리셋, 저장값 정리(`cleanDesign`), 카드 위치 → 배경 판·영상 창 계산(`frameGeometry`), 끌 때 맞춤선(`snapBox`), 이름 붙여 저장한 구성(`cleanSaved`/`withSaved`). 순수 함수, node 테스트
+  - `design.ts`: 에디터가 바꾸는 설정(`ShortsDesign`: 요소별 표시·모양·위치·크기, 파란 배경, 그라데이션 세기, 영상 높이·좌우·확대), 프리셋, 저장값 정리(`cleanDesign`), 카드 위치 → 배경 판·영상 창 계산(`frameGeometry`), 끌 때 맞춤선(`snapBox`), 이름 붙여 저장한 구성(`cleanSaved`/`withSaved`). 순수 함수, node 테스트
   - `layout.ts`: 설정 → 오버레이(`buildLayout`)와 `drawFrame`. 미리보기와 인코더가 같은 함수로 그림. 요소별 상자(`boxes`)를 같이 돌려줘서 에디터가 고르고 끌 때 씀
   - `card.ts`(곡 카드: 간단 = 자켓·난이도·ST/DX·곡명·레벨 / 원본 = Figma 카드 그대로 성적 줄 포함), `stats.ts`(영상 위 달성률과 랭크·마크: 넷 이미지 또는 글자, 글자 뒤 그라데이션), `profile.ts`(프로필 카드: 레이팅 틀은 Figma, 단·클래스는 maimai DX NET 이미지이고 못 받거나 배지를 고르면 Figma 배지), `draw.ts`(공통 캔버스 도구)
   - `images.ts`: maimai DX NET 이미지 경로와 번호 → 단/클래스/레이팅 색 (순수 함수, node 테스트)
