@@ -307,6 +307,256 @@
   display: flex;
   gap: var(--crl-space-2);
 }
+/* three buttons do not fit beside the title on a phone: they go on their own line */
+@media (max-width: 640px) {
+  .song {
+    flex-wrap: wrap;
+  }
+  .song__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* shorts: preview that pieces are picked and dragged on, controls per piece, encode */
+.shorts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-3);
+}
+.editor__player .shorts {
+  margin-top: var(--crl-space-5);
+}
+.shorts .shorts__close {
+  flex: none;
+  padding-inline: var(--crl-space-5);
+}
+.shorts__body {
+  display: flex;
+  gap: var(--crl-space-5);
+  align-items: flex-start;
+}
+/* the preview is the editing surface: pieces are picked, dragged and resized on it */
+.shorts__stage {
+  flex: none;
+  width: 52%;
+  max-width: 380px;
+  /* stays in view while the settings beside it scroll */
+  position: sticky;
+  top: calc(var(--crl-space-9) * 2 + var(--crl-space-3));
+}
+.shorts__preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 9 / 16;
+  border-radius: var(--crl-radius-control);
+  border: 1px solid var(--crl-border);
+  background: var(--crl-canvas-alt);
+  touch-action: none;
+}
+.shorts__preview:focus-visible {
+  outline: 2px solid var(--crl-focus);
+  outline-offset: 2px;
+}
+/* under the preview: play the range, undo, redo */
+.shorts__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--crl-space-2);
+  margin-top: var(--crl-space-3);
+}
+.shorts__tools .nudge {
+  flex: 1 1 auto;
+  padding-inline: var(--crl-space-3);
+  white-space: nowrap;
+}
+.shorts__hint {
+  margin-top: var(--crl-space-3);
+}
+/* naming a design to save; what can be done with the saved design that is loaded */
+.shorts__save {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-3);
+}
+.shorts__loaded {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--crl-space-2) var(--crl-space-4);
+}
+.shorts__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--crl-accent-soft);
+  font: inherit;
+  cursor: pointer;
+}
+.shorts__link:hover {
+  text-decoration: underline;
+}
+.shorts__link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.shorts__controls {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-4);
+}
+.shorts__slider,
+.shorts__check input,
+.layer input {
+  accent-color: var(--crl-accent);
+}
+.shorts__slider {
+  width: 100%;
+}
+/* a label with the control it names */
+.shorts__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-2);
+}
+.shorts__check {
+  display: flex;
+  align-items: center;
+  gap: var(--crl-space-3);
+  color: var(--crl-ink-soft);
+  font-size: 14px;
+  cursor: pointer;
+}
+/* what is in the frame: tick to show, press the name to edit */
+.layers {
+  list-style: none;
+  margin: 0;
+  padding: var(--crl-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-1);
+  border: 1px solid var(--crl-border);
+  border-radius: var(--crl-radius-control);
+  background: var(--crl-canvas-alt);
+}
+.layer {
+  display: flex;
+  align-items: center;
+  gap: var(--crl-space-3);
+  padding-left: var(--crl-space-3);
+  border-radius: var(--crl-radius-small);
+}
+.layer.is-picked {
+  background: var(--crl-surface-2);
+  box-shadow: 0 0 0 1px var(--crl-border-strong);
+}
+.layer input,
+.layer__gap {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.layer__name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crl-space-3);
+  min-height: 36px;
+  padding: 0 var(--crl-space-3) 0 0;
+  border: 0;
+  background: none;
+  color: var(--crl-muted);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.layer.is-picked .layer__name,
+.layer__name:hover {
+  color: var(--crl-ink);
+}
+.layer__name:focus-visible {
+  outline: 2px solid var(--crl-focus);
+  outline-offset: -2px;
+  border-radius: var(--crl-radius-small);
+}
+.layer__note {
+  color: var(--crl-dim);
+  font-size: 12px;
+}
+/* settings of the picked piece */
+.shorts__inspector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-4);
+}
+.shorts__controls .nudges {
+  flex-wrap: wrap;
+}
+.shorts__controls .nudge {
+  flex: none;
+  padding-inline: var(--crl-space-4);
+  white-space: nowrap;
+}
+.shorts__reset {
+  align-self: flex-start;
+}
+.shorts .nudge.is-on {
+  background: var(--crl-accent);
+  color: var(--crl-accent-ink);
+}
+.shorts .nudge:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* position sliders are for fingers; with a mouse the piece is dragged on the preview */
+@media (hover: hover) and (pointer: fine) {
+  .shorts__touch {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .shorts__body {
+    gap: var(--crl-space-4);
+  }
+  .shorts__stage {
+    width: 46%;
+  }
+  .shorts__hint {
+    display: none;
+  }
+}
+.profile-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-3);
+  padding-top: var(--crl-space-3);
+  border-top: 1px solid var(--crl-border);
+}
+.profile-edit__row {
+  display: flex;
+  gap: var(--crl-space-3);
+}
+.profile-edit__row .crl-field {
+  flex: 1;
+  min-width: 0;
+}
+.shorts__bar {
+  height: 6px;
+  border-radius: var(--crl-radius-pill);
+  background: var(--crl-surface-2);
+  overflow: hidden;
+}
+.shorts__bar > div {
+  height: 100%;
+  background: var(--crl-accent);
+  transition: width 0.3s linear;
+}
 
 /* YouTube chapters */
 .chapters {

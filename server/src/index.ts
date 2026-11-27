@@ -336,7 +336,9 @@ interface PlayIn {
 /** import from the bookmarklet (via /import on the web); re-importing the same plays is harmless */
 app.post("/api/plays", requireUser, async (c) => {
   const user = c.get("user");
-  const body = await c.req.json<{ plays?: PlayIn[] }>().catch(() => ({}) as { plays?: PlayIn[] });
+  const body = await c.req
+    .json<{ plays?: PlayIn[]; profile?: unknown }>()
+    .catch(() => ({}) as { plays?: PlayIn[]; profile?: unknown });
   const list = Array.isArray(body.plays) ? body.plays.slice(0, 200) : [];
   const rows = list.flatMap((p) => {
     const playedAt = Number(p.playedAt);
@@ -364,8 +366,97 @@ app.post("/api/plays", requireUser, async (c) => {
     from: Infinity,
     to: 0,
   });
-  return c.json({ received: rows.length, added: (after?.n ?? 0) - (before?.n ?? 0), from: range.from, to: range.to });
+  // the bookmarklet also reads the player profile (for the legacy shorts layout); keep the latest one
+  const profile = cleanProfile(body.profile);
+  if (profile) {
+    await c.env.DB.prepare(
+      `INSERT INTO maimai_profiles (user_id, data, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT (user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+    )
+      .bind(user.id, JSON.stringify(profile), t)
+      .run();
+  }
+  return c.json({
+    received: rows.length,
+    added: (after?.n ?? 0) - (before?.n ?? 0),
+    from: range.from,
+    to: range.to,
+    profile: !!profile,
+  });
 });
+
+/** only the fields the profile card draws, each checked (it comes from a page script) */
+function cleanProfile(input: unknown): Record<string, string | number> | null {
+  if (!input || typeof input !== "object") return null;
+  const p = input as Record<string, unknown>;
+  const name = typeof p.name === "string" ? p.name.trim().slice(0, 32) : "";
+  if (!name) return null;
+  const out: Record<string, string | number> = { name };
+  const int = (key: string, max: number) => {
+    const n = Number(p[key]);
+    if (p[key] != null && Number.isInteger(n) && n >= 0 && n <= max) out[key] = n;
+  };
+  int("rating", 99999);
+  int("course", 99);
+  int("cls", 99);
+  int("playCount", 9_999_999);
+  int("playCountCurrent", 9_999_999);
+  if (typeof p.ratingBase === "string" && /^[a-z_]{1,24}$/.test(p.ratingBase)) out.ratingBase = p.ratingBase;
+  if (typeof p.courseImg === "string" && /^course_rank_[0-9A-Za-z]{1,24}$/.test(p.courseImg)) out.courseImg = p.courseImg;
+  if (typeof p.classImg === "string" && /^class_rank_s_[0-9A-Za-z]{1,24}$/.test(p.classImg)) out.classImg = p.classImg;
+  // the bookmarklet sends the image address, the profile form sends back the stored name
+  const icon = typeof p.icon === "string" ? (/img\/Icon\/([0-9a-f]{8,32})\.png/.exec(p.icon)?.[1] ?? /^[0-9a-f]{8,32}$/.exec(p.icon)?.[0]) : undefined;
+  if (icon) out.icon = icon;
+  return out;
+}
+
+/** the profile typed or corrected by hand on the web (the next bookmarklet import replaces it again) */
+app.put("/api/maimai/profile", requireUser, async (c) => {
+  const profile = cleanProfile(await c.req.json().catch(() => null));
+  if (!profile) return c.json({ error: "닉네임은 꼭 있어야 함" }, 400);
+  const t = now();
+  await c.env.DB.prepare(
+    `INSERT INTO maimai_profiles (user_id, data, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT (user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+  )
+    .bind(c.get("user").id, JSON.stringify(profile), t)
+    .run();
+  return c.json({ profile, updatedAt: t });
+});
+
+app.get("/api/maimai/profile", requireUser, async (c) => {
+  const row = await c.env.DB.prepare("SELECT data, updated_at FROM maimai_profiles WHERE user_id = ?")
+    .bind(c.get("user").id)
+    .first<{ data: string; updated_at: number }>();
+  return c.json({ profile: row ? JSON.parse(row.data) : null, updatedAt: row?.updated_at ?? null });
+});
+
+/**
+ * maimai DX NET images (jacket, ST/DX badge, rank, FC/sync marks, player icon, dan and class badges) for the shorts cards.
+ * The browser can't draw them onto a canvas straight from maimai DX NET (no CORS header), so they pass
+ * through here. Only these image paths are allowed, they need no maimai login, and nothing is stored.
+ */
+const MAIMAI_IMG_BASE = "https://maimaidx-eng.com/maimai-mobile/img/";
+const MAIMAI_IMG_PATH =
+  /^((Music|Icon)\/[0-9a-f]{8,32}|playlog\/[a-z0-9_]{1,24}|course\/course_rank_[0-9A-Za-z]{1,24}|class\/class_rank_s_[0-9A-Za-z]{1,24}|music_(dx|standard)|diff_[a-z]{1,12})\.png$/;
+const MAIMAI_IMG_MAX_BYTES = 2 * 1024 * 1024;
+
+app.get("/api/maimai/img/:dir{[A-Za-z]+}/:file", requireUser, (c) => maimaiImage(c, `${c.req.param("dir")}/${c.req.param("file")}`));
+app.get("/api/maimai/img/:file", requireUser, (c) => maimaiImage(c, c.req.param("file")));
+
+async function maimaiImage(c: Ctx, path: string): Promise<Response> {
+  if (!MAIMAI_IMG_PATH.test(path)) return c.json({ error: "not found" }, 404);
+  const res = await fetch(MAIMAI_IMG_BASE + path, { redirect: "error", cf: { cacheTtl: 86400, cacheEverything: true } }).catch(
+    () => null,
+  );
+  const length = Number(res?.headers.get("Content-Length") ?? 0);
+  if (!res?.ok || !(res.headers.get("Content-Type") ?? "").startsWith("image/") || length > MAIMAI_IMG_MAX_BYTES) {
+    return c.json({ error: "이미지를 못 받아옴" }, 502);
+  }
+  return new Response(res.body, {
+    headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=604800" },
+  });
+}
 
 app.delete("/api/recordings/:id", requireUser, async (c) => {
   const rec = await ownRecording(c);

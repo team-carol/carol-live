@@ -77,14 +77,15 @@ const MARK: Record<string, keyof typeof maimaiClear> = {
   fsp: "FS+",
 };
 
+/** one FC/AP or sync mark by its playlog/<name>.png name */
+export function markOf(m: string | null | undefined): { label: string; color: string } | null {
+  const label = m ? MARK[m] : undefined;
+  return label ? { label, color: maimaiClear[label] } : null;
+}
+
 /** FC/AP and sync marks shown on a play, e.g. ["AP", "FS+"] */
 export function marks(p: Play): { label: string; color: string }[] {
-  const out: { label: string; color: string }[] = [];
-  for (const m of [p.details?.fc, p.details?.sync]) {
-    const label = m ? MARK[m] : undefined;
-    if (label) out.push({ label, color: maimaiClear[label] });
-  }
-  return out;
+  return [markOf(p.details?.fc), markOf(p.details?.sync)].filter((m) => m !== null);
 }
 
 export function achievementText(a: number | null | undefined): string | null {

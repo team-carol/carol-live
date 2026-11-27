@@ -61,6 +61,28 @@ export interface PlayImport {
   details: PlayDetails;
 }
 
+/** maimai DX NET player profile kept on the server (lib/maimaiScrape.js scrapeMaimaiProfile -> /api/plays) */
+export interface MaimaiProfile {
+  name: string;
+  rating?: number;
+  /** rating_base_<this>.png on maimai DX NET: normal, blue, …, rainbow, rainbow_kiwami */
+  ratingBase?: string;
+  /** img/Icon/<this>.png */
+  icon?: string;
+  /** course_rank_<n>: 1 = 初段 … 10 = 十段, 12 = 真初段 … 21 = 真十段, 22 = 真皆伝, 23 = 裏皆伝 */
+  course?: number;
+  /** class_rank_s_<n>: 0 = B5 … 24 = SSS1, 25 = LEGEND */
+  cls?: number;
+  /** file names (no .png) of the dan and class badges under img/course/ and img/class/ */
+  courseImg?: string;
+  classImg?: string;
+  playCount?: number;
+  playCountCurrent?: number;
+}
+
+/** the same as it comes from the bookmarklet: the icon is still the full image address */
+export type MaimaiProfileImport = MaimaiProfile;
+
 export interface DeviceInfo {
   id: string;
   name: string;
@@ -91,11 +113,14 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  importPlays: (plays: PlayImport[]) =>
-    call<{ received: number; added: number; from: number; to: number }>("/api/plays", {
+  importPlays: (plays: PlayImport[], profile?: MaimaiProfileImport | null) =>
+    call<{ received: number; added: number; from: number; to: number; profile?: boolean }>("/api/plays", {
       method: "POST",
-      body: JSON.stringify({ plays }),
+      body: JSON.stringify(profile ? { plays, profile } : { plays }),
     }),
+  maimaiProfile: () => call<{ profile: MaimaiProfile | null; updatedAt: number | null }>("/api/maimai/profile"),
+  saveMaimaiProfile: (profile: MaimaiProfile) =>
+    call<{ profile: MaimaiProfile; updatedAt: number }>("/api/maimai/profile", { method: "PUT", body: JSON.stringify(profile) }),
   me: () => call<Me>("/api/me"),
   logout: () => call<{ ok: true }>("/auth/logout", { method: "POST" }),
   recordings: () => call<{ items: Recording[]; usage: { used: number; cap: number } }>("/api/recordings"),

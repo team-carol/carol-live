@@ -7,6 +7,7 @@ import { decodeCounts, findSongs, matchPlays, type Song } from "../lib/songs";
 import { youtubeChapters } from "../lib/chapters";
 import { achievementText, difficultyLabel, difficultyStyle, marks, playFilePart, rankColor, rankLabel } from "../lib/maimai";
 import { link } from "../router";
+import { ShortsCard } from "./ShortsCard";
 
 interface Clip {
   name: string;
@@ -34,6 +35,8 @@ export function EditorPage({ id }: { id: string }) {
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
   const [picked, setPicked] = useState<number | null>(null);
+  const [shortsFor, setShortsFor] = useState<number | null>(null);
+  const [shortsBusy, setShortsBusy] = useState(false);
   const previewUntil = useRef<number | null>(null);
 
   useEffect(() => {
@@ -122,8 +125,11 @@ export function EditorPage({ id }: { id: string }) {
     }
   };
 
-  const preview = () => {
-    seek(start, true);
+  /** plays the range and stops at its end; with [resume], from where the player is when that is inside the range */
+  const preview = (resume = false) => {
+    const v = video.current;
+    if (resume && v && v.currentTime >= start && v.currentTime < end - 0.3) void v.play();
+    else seek(start, true);
     previewUntil.current = end;
   };
 
@@ -240,6 +246,23 @@ export function EditorPage({ id }: { id: string }) {
             <span>{clock(now, true)}</span>
             <span>{clock(duration)}</span>
           </div>
+
+          {/* under the player, where there is room for a preview big enough to drag things on */}
+        {shortsFor !== null && songs[shortsFor]?.play && (
+          <ShortsCard
+            play={songs[shortsFor].play}
+            video={video}
+            fileUrl={api.fileUrl(rec.id)}
+            from={start}
+            to={end}
+            name={songName(songs[shortsFor], shortsFor).replace(/\.mp4$/, "_shorts.mp4")}
+            disabled={!!busy || !valid}
+            onPlayRange={() => preview(true)}
+            onBusy={setShortsBusy}
+            onDone={(c) => setClips((list) => [c, ...list])}
+            onClose={() => setShortsFor(null)}
+          />
+        )}
         </div>
 
         <div className="editor__side">
@@ -302,7 +325,7 @@ export function EditorPage({ id }: { id: string }) {
                       <Button
                         variant="primary"
                         size="sm"
-                        disabled={!!busy}
+                        disabled={!!busy || shortsBusy}
                         onClick={() => {
                           const r = songRange(x);
                           setPicked(i);
@@ -313,6 +336,20 @@ export function EditorPage({ id }: { id: string }) {
                       >
                         받기
                       </Button>
+                      {x.play && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={shortsBusy}
+                          onClick={() => {
+                            pickSong(i);
+                            setShortsFor(i);
+                          }}
+                          aria-label={`${i + 1}번 곡 쇼츠 만들기`}
+                        >
+                          쇼츠
+                        </Button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -387,10 +424,10 @@ export function EditorPage({ id }: { id: string }) {
             <p className="crl-caption clip-len">클립 길이 {clock(Math.max(0, end - start), true)}</p>
 
             <div className="panel-actions">
-              <Button variant="secondary" onClick={preview} disabled={!valid}>
+              <Button variant="secondary" onClick={() => preview()} disabled={!valid}>
                 구간 미리보기
               </Button>
-              <Button variant="primary" onClick={cut} disabled={!valid || !!busy}>
+              <Button variant="primary" onClick={cut} disabled={!valid || !!busy || shortsBusy}>
                 {busy ? "만드는 중…" : "잘라서 받기"}
               </Button>
             </div>

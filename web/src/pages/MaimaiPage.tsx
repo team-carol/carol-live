@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, CardBody, CardTitle, Tag } from "@team-carol/design-system/react";
-import { api, type PlayImport } from "../api";
-import { achievementText, bookmarklet, difficultyLabel, difficultyStyle, readImportFragment } from "../lib/maimai";
+import { api } from "../api";
+import { achievementText, bookmarklet, difficultyLabel, difficultyStyle, readImportFragment, type ImportPayload } from "../lib/maimai";
 import { link } from "../router";
 
 const RECORD_URL = "https://maimaidx-eng.com/maimai-mobile/record/";
@@ -88,7 +88,7 @@ export function MaimaiPage() {
 
       <p className="crl-helper maimai-note">
         기록은 이 사이트(내 계정)에만 저장되고 maimai DX NET에 로그인 정보를 넘기지 않음. 북마크는 지금 보고 있는 기록
-        페이지의 내용만 읽음.
+        페이지와, 쇼츠 프로필 카드에 쓸 플레이어 데이터 페이지(닉네임·레이팅·아이콘·단·클래스·플레이 수)만 읽음.
       </p>
     </>
   );
@@ -96,7 +96,7 @@ export function MaimaiPage() {
 
 /** /import#<plays>: opened by the bookmarklet */
 export function ImportPage() {
-  const [plays] = useState<PlayImport[] | null>(() => {
+  const [payload] = useState<ImportPayload | null>(() => {
     const fromHash = readImportFragment(location.hash);
     if (fromHash) {
       // keep it out of the address bar / history
@@ -107,15 +107,18 @@ export function ImportPage() {
     return readImportFragment(safeStorage(() => localStorage.getItem(PENDING_IMPORT_KEY)) ?? "");
   });
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
-  const [result, setResult] = useState<{ received: number; added: number } | null>(null);
+  const [result, setResult] = useState<{ received: number; added: number; profile?: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const plays = payload?.plays ?? null;
+  const profile = payload?.profile ?? null;
 
   const run = async () => {
     if (!plays) return;
     setState("busy");
     setError(null);
     try {
-      setResult(await api.importPlays(plays));
+      setResult(await api.importPlays(plays, profile));
       setState("done");
       safeStorage(() => localStorage.removeItem(PENDING_IMPORT_KEY));
     } catch (e) {
@@ -154,6 +157,7 @@ export function ImportPage() {
             <CardTitle>가져왔음</CardTitle>
             <CardBody>
               새로 {result.added}곡 저장 (받은 기록 {result.received}곡). 이 시간대 녹화를 열면 곡 이름이 붙어 있음.
+              {result.profile ? " 프로필도 저장했음 (쇼츠 레거시 레이아웃에 씀)." : ""}
             </CardBody>
             <div className="panel-actions">
               <Button variant="primary" {...link("/")}>
@@ -163,7 +167,12 @@ export function ImportPage() {
           </>
         ) : (
           <>
-            <CardBody>내 carol live 계정에 아래 플레이 기록을 저장함. 이미 있는 기록은 겹치지 않음.</CardBody>
+            <CardBody>
+              내 carol live 계정에 아래 플레이 기록을 저장함. 이미 있는 기록은 겹치지 않음.
+              {profile
+                ? ` 프로필(${profile.name}${profile.rating != null ? ` · 레이팅 ${profile.rating}` : ""})도 같이 저장함.`
+                : ""}
+            </CardBody>
             <div className="panel-actions">
               <Button variant="primary" onClick={run} disabled={state === "busy"}>
                 {state === "busy" ? "가져오는 중…" : `${plays.length}곡 가져오기`}
