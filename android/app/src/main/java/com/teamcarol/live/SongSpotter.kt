@@ -56,6 +56,8 @@ object SongSpotter {
   private const val KNOWN_INTERVAL_MS = 6_000L
   /** a read that never comes back (no frames) is given up after this long */
   private const val READ_TIMEOUT_MS = 10_000L
+  /** how much the part of the picture that is read is enlarged first */
+  private const val ENLARGE = 2
   /** this many reads in a row without the title and the song is over */
   private const val MISSES_TO_CLEAR = 5
 
@@ -159,18 +161,22 @@ object SongSpotter {
     var lines = 0
     var match: Match? = null
     var region: Bitmap? = null
+    var enlarged: Bitmap? = null
     try {
       // the upper monitor is in the upper part of the picture; the lower part is also where our own overlay goes
       val part = if (frame.height > frame.width) 0.45f else 0.75f
       region = Bitmap.createBitmap(frame, 0, 0, frame.width, (frame.height * part).toInt())
+      // the title is only 10–12 px tall in a 1080 px wide picture; the recognizer wants characters about twice that
+      enlarged = Bitmap.createScaledBitmap(region, region.width * ENLARGE, region.height * ENLARGE, true)
       val client = recognizer ?: return
-      val text = Tasks.await(client.process(InputImage.fromBitmap(region, 0)), 6, TimeUnit.SECONDS)
+      val text = Tasks.await(client.process(InputImage.fromBitmap(enlarged, 0)), 6, TimeUnit.SECONDS)
       val read = text.textBlocks.flatMap { block -> block.lines.map { it.text } }
       lines = read.size
       match = index.best(read)
     } catch (e: Exception) {
       Log.w(TAG, "read failed", e)
     } finally {
+      enlarged?.recycle()
       region?.recycle()
       frame.recycle()
       val seen = lines
