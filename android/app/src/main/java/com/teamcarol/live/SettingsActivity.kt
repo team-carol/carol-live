@@ -102,10 +102,10 @@ class SettingsActivity : AppCompatActivity() {
         result
           .onSuccess { release ->
             if (release != null) UpdateDialog.show(this, release)
-            else android.widget.Toast.makeText(this, "최신 버전임", android.widget.Toast.LENGTH_SHORT).show()
+            else android.widget.Toast.makeText(this, "최신 버전입니다", android.widget.Toast.LENGTH_SHORT).show()
           }
           .onFailure {
-            android.widget.Toast.makeText(this, "확인 실패: ${it.message}", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(this, "확인하지 못했습니다: ${it.message}", android.widget.Toast.LENGTH_SHORT).show()
           }
       }
     }
@@ -146,7 +146,7 @@ class SettingsActivity : AppCompatActivity() {
       upTag.setBackgroundResource(R.drawable.crl_tag_success)
       upTag.setTextColor(ContextCompat.getColor(this, R.color.crl_success))
       upStatus.text = buildString {
-        append("'${paired.deviceName}' 폴더로 올라감")
+        append("'${paired.deviceName}' 폴더로 올라갑니다")
         paired.account?.let { append(" · $it 계정") }
         if (pending > 0) append(" · 대기 ${pending}개")
       }
@@ -156,7 +156,7 @@ class SettingsActivity : AppCompatActivity() {
       upTag.text = "연결 안 됨"
       upTag.setBackgroundResource(R.drawable.crl_tag_neutral)
       upTag.setTextColor(ContextCompat.getColor(this, R.color.crl_muted))
-      upStatus.text = if (pending > 0) "업로드 대기 ${pending}개 · 연결하면 올라감" else "녹화를 웹에서 보고 자르려면 서버에 연결해줘"
+      upStatus.text = if (pending > 0) "업로드 대기 ${pending}개 · 연결하면 올라갑니다" else "녹화를 웹에서 보고 자르려면 서버에 연결해 주세요"
       upPair.text = "연결하기"
       upUnpair.visibility = android.view.View.GONE
     }
@@ -170,12 +170,12 @@ class SettingsActivity : AppCompatActivity() {
     val server = upServer.text.toString().trim().trimEnd('/')
     val name = upDevice.text.toString().trim()
     if (!server.startsWith("https://") && !server.startsWith("http://")) {
-      upServer.error = "https:// 로 시작하는 주소"
+      upServer.error = "https:// 로 시작하는 주소를 넣어 주세요"
       upServer.requestFocus()
       return
     }
     if (name.isEmpty()) {
-      upDevice.error = "기기 이름을 적어줘"
+      upDevice.error = "기기 이름을 적어 주세요"
       upDevice.requestFocus()
       return
     }
@@ -232,7 +232,7 @@ class SettingsActivity : AppCompatActivity() {
     val res = selectedResolution()
     val fps = selectedFps()
     val rec = StreamSettings.recommendedVideoKbps(res, fps)
-    txtBitrateHint.text = "권장 $rec · 오락실 업로드 속도의 60~70% 이하로 (1000~20000)"
+    txtBitrateHint.text = "권장 $rec · 오락실 업로드 속도의 60~70% 이하로 맞춰 주세요 (1000~20000)"
 
     val streamKbps = etVideoBitrate.text.toString().trim().toIntOrNull() ?: rec
     val high = rgRecordQuality.checkedRadioButtonId == R.id.rq_high
@@ -242,7 +242,7 @@ class SettingsActivity : AppCompatActivity() {
       java.util.Locale.US,
       "1시간에 약 %.1fGB%s",
       gbPerHour,
-      if (high) " · 인코더를 하나 더 써서 발열이 늘어남" else " · 송출 영상을 그대로 저장",
+      if (high) " · 인코더를 하나 더 써서 발열이 늘어납니다" else " · 송출 영상을 그대로 저장합니다",
     )
   }
 
@@ -263,19 +263,19 @@ class SettingsActivity : AppCompatActivity() {
   private fun save() {
     val server = etServer.text.toString().trim()
     if (!server.startsWith("rtmp://") && !server.startsWith("rtmps://")) {
-      etServer.error = "rtmp:// 또는 rtmps:// 로 시작해야 함"
+      etServer.error = "rtmp:// 또는 rtmps:// 로 시작해야 합니다"
       etServer.requestFocus()
       return
     }
     val kbps = etVideoBitrate.text.toString().trim().toIntOrNull()
     if (kbps == null || kbps !in 1000..20000) {
-      etVideoBitrate.error = "1000~20000 사이로 넣어줘"
+      etVideoBitrate.error = "1000~20000 사이로 넣어 주세요"
       etVideoBitrate.requestFocus()
       return
     }
     val channel = normalizeChannel(ytChannel.text.toString())
     if (channel == null) {
-      ytChannel.error = "@핸들, 채널 주소, UC로 시작하는 채널 ID 중 하나"
+      ytChannel.error = "@핸들, 채널 주소, UC로 시작하는 채널 ID 중 하나를 넣어 주세요"
       ytChannel.requestFocus()
       return
     }

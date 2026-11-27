@@ -205,7 +205,7 @@ object YouTubeChat {
             findTries < SLOW_FIND_TRIES -> schedule(60_000)
             else -> {
               stop()
-              set(Status.GAVE_UP, "@${channel.removePrefix("@")} 라이브를 못 찾음 · 눌러서 다시 찾기")
+              set(Status.GAVE_UP, "@${channel.removePrefix("@")} 라이브를 찾지 못했습니다 · 누르면 다시 찾습니다")
             }
           }
         }
@@ -245,14 +245,14 @@ object YouTubeChat {
     when {
       reason == "quota" -> {
         stop()
-        set(Status.QUOTA, "오늘 유튜브 할당량을 다 씀 · 한국 시간 오후 4~5시에 초기화")
+        set(Status.QUOTA, "오늘 유튜브 할당량을 다 썼습니다 · 한국 시간 오후 4~5시에 초기화됩니다")
       }
       reason == "too_fast" -> schedule(10_000)
       reason == "chat_ended" -> broadcastEnded()
-      reason == "chat_disabled" -> fail("이 방송은 채팅이 꺼져 있음")
-      reason == "no_key" -> fail("서버에 유튜브 API 키가 아직 없음")
-      code == 404 && finding -> fail("@${channel.removePrefix("@")} 채널을 못 찾음 · 설정에서 확인")
-      code == 401 -> fail("서버 연결이 해제됨 · 설정에서 다시 연결")
+      reason == "chat_disabled" -> fail("이 방송은 채팅이 꺼져 있습니다")
+      reason == "no_key" -> fail("서버에 유튜브 API 키가 아직 없습니다")
+      code == 404 && finding -> fail("@${channel.removePrefix("@")} 채널을 찾지 못했습니다 · 설정에서 확인해 주세요")
+      code == 401 -> fail("서버 연결이 해제됐습니다 · 설정에서 다시 연결해 주세요")
       // network trouble or a server hiccup: keep trying quietly
       else -> schedule(15_000)
     }

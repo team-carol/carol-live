@@ -277,11 +277,11 @@ export function EditorPage({ id }: { id: string }) {
             </div>
             {!counts && (
               <p className="crl-card__body">
-                곡 구간 정보가 없는 녹화임. 앱 v0.6부터 녹화하면서 버튼 소리로 곡을 나눠둠.
+                곡 구간 정보가 없는 녹화입니다. 앱 v0.6부터는 녹화하면서 버튼 소리로 곡을 나눠 둡니다.
               </p>
             )}
             {counts && songs.length === 0 && (
-              <p className="crl-card__body">플레이한 구간을 못 찾았음. 아래에서 직접 잘라줘.</p>
+              <p className="crl-card__body">플레이한 구간을 찾지 못했습니다. 아래에서 직접 잘라 주세요.</p>
             )}
             {songs.length > 0 && (
               <ol className="songs__list">
@@ -357,7 +357,7 @@ export function EditorPage({ id }: { id: string }) {
             )}
             {counts && songs.length > 0 && named === 0 && (
               <p className="crl-helper">
-                곡 이름은 <a {...link("/maimai")}>maimai DX NET 기록</a>을 가져오면 붙음.
+                곡 이름은 <a {...link("/maimai")}>maimai DX NET 기록</a>을 가져오면 붙습니다.
               </p>
             )}
           </Card>
@@ -366,7 +366,7 @@ export function EditorPage({ id }: { id: string }) {
 
           <Card className="editor__panel">
             <h2 className="crl-card__title">구간 자르기</h2>
-            <p className="crl-card__body">재인코딩 없이 원본 화질 그대로, 필요한 부분만 내려받아서 자름.</p>
+            <p className="crl-card__body">재인코딩 없이 원본 화질 그대로, 필요한 부분만 내려받아서 자릅니다.</p>
 
             <div className="mark">
               <div className="mark-row">
@@ -400,7 +400,7 @@ export function EditorPage({ id }: { id: string }) {
                   label="끝"
                   value={endText}
                   inputMode="decimal"
-                  error={valid ? undefined : "끝이 시작보다 뒤여야 함"}
+                  error={valid ? undefined : "끝이 시작보다 뒤여야 합니다"}
                   onChange={(e) => setEndText(e.target.value)}
                   onBlur={() => {
                     const t = parseClock(endText);
@@ -529,9 +529,9 @@ function ChaptersCard({ rec, songs }: { rec: Recording; songs: Song[] }) {
           {copied ? "복사됨" : "챕터 복사"}
         </Button>
       </div>
-      {!ok && <p className="crl-helper crl-helper--error">유튜브는 챕터가 3개 이상이어야 인식함</p>}
+      {!ok && <p className="crl-helper crl-helper--error">유튜브는 챕터가 3개 이상이어야 인식합니다</p>}
       <p className="crl-helper">
-        유튜브 스튜디오 → 콘텐츠 → 이 방송 → 설명. 곡 시작이 어긋나면 시간 차이를 맞추면 전부 같이 움직임.
+        유튜브 스튜디오 → 콘텐츠 → 이 방송 → 설명. 곡 시작이 어긋나면 시간 차이를 맞춰 주세요. 전부 같이 움직입니다.
       </p>
     </Card>
   );

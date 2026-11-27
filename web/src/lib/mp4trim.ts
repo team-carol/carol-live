@@ -105,7 +105,7 @@ function child(b: Uint8Array, parent: Box, type: string, skip = 0): Box | undefi
 }
 
 function must(box: Box | undefined, name: string): Box {
-  if (!box) throw new Error(`mp4: ${name} 박스가 없음`);
+  if (!box) throw new Error(`mp4: ${name} 박스가 없습니다`);
   return box;
 }
 
@@ -121,12 +121,12 @@ async function locate(reader: RangeReader): Promise<{ ftyp: Uint8Array; moov: Ui
   while (p < reader.size && !(ftyp && moov)) {
     const head = await reader.read(p, Math.min(16, reader.size - p));
     const box = boxAt(head, 0, reader.size - p);
-    if (box.size < 8) throw new Error("mp4: 박스 구조가 깨져 있음");
+    if (box.size < 8) throw new Error("mp4: 박스 구조가 깨져 있습니다");
     if (box.type === "ftyp") ftyp = await reader.read(p, box.size);
     if (box.type === "moov") moov = await reader.read(p, box.size);
     p += box.size;
   }
-  if (!ftyp || !moov) throw new Error("mp4: ftyp/moov를 못 찾음 (녹화가 정상 종료되지 않았을 수 있음)");
+  if (!ftyp || !moov) throw new Error("mp4: ftyp/moov를 찾지 못했습니다 (녹화가 정상 종료되지 않았을 수 있습니다)");
   return { ftyp, moov };
 }
 
@@ -282,7 +282,7 @@ function parseMovie(moovBytes: Uint8Array): Movie {
       hasSyncTable,
     });
   }
-  if (!tracks.length) throw new Error("mp4: 영상/소리 트랙이 없음");
+  if (!tracks.length) throw new Error("mp4: 영상/소리 트랙이 없습니다");
   return { timescale, mvhd: raw(b, mvhdBox), tracks };
 }
 
@@ -582,7 +582,7 @@ export async function trimMp4(
   end: number,
   onProgress?: (p: TrimProgress) => void,
 ): Promise<TrimResult> {
-  if (!(end > start)) throw new Error("끝 지점이 시작보다 뒤여야 함");
+  if (!(end > start)) throw new Error("끝 지점이 시작보다 뒤여야 합니다");
   onProgress?.({ phase: "index", loaded: 0, total: 1 });
   const { ftyp, moov: moovBytes } = await locate(reader);
   const movie = parseMovie(moovBytes);
@@ -591,7 +591,7 @@ export async function trimMp4(
   const picks = movie.tracks
     .map((t) => (t.handler === "vide" ? pickVideo(t, start, end) : pickAudio(t, start, end)))
     .filter((p) => p.samples.length > 0);
-  if (!picks.length) throw new Error("선택한 구간에 영상이 없음");
+  if (!picks.length) throw new Error("선택한 구간에 영상이 없습니다");
 
   // 1) download the needed byte ranges, merged when close together
   const wanted = picks.flatMap((p) => p.samples).sort((a, b) => a.offset - b.offset);
@@ -673,11 +673,11 @@ export async function trimMp4(
 /** RangeReader over HTTP (server must support Range) */
 export async function httpReader(url: string, init?: RequestInit): Promise<RangeReader> {
   const head = await fetch(url, { ...init, headers: { ...(init?.headers ?? {}), Range: "bytes=0-0" } });
-  if (head.status !== 206) throw new Error("서버가 Range 요청을 지원하지 않음");
+  if (head.status !== 206) throw new Error("서버가 Range 요청을 지원하지 않습니다");
   const cr = head.headers.get("Content-Range") ?? "";
   const size = Number(cr.split("/")[1]);
   await head.arrayBuffer();
-  if (!Number.isFinite(size)) throw new Error("파일 크기를 알 수 없음");
+  if (!Number.isFinite(size)) throw new Error("파일 크기를 알 수 없습니다");
   return {
     size,
     async read(offset, length) {
@@ -685,7 +685,7 @@ export async function httpReader(url: string, init?: RequestInit): Promise<Range
         ...init,
         headers: { ...(init?.headers ?? {}), Range: `bytes=${offset}-${offset + length - 1}` },
       });
-      if (res.status !== 206) throw new Error(`Range 요청 실패 (${res.status})`);
+      if (res.status !== 206) throw new Error(`Range 요청에 실패했습니다 (${res.status})`);
       return new Uint8Array(await res.arrayBuffer());
     },
   };

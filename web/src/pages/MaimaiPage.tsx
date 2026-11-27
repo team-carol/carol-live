@@ -37,8 +37,8 @@ export function MaimaiPage() {
       <header className="page-head">
         <h1 className="crl-heading-2">maimai DX NET 기록 연결</h1>
         <p className="crl-body-sm">
-          녹화에서 나눈 곡에 곡명·난이도·달성률을 붙이려고, maimai DX NET의 최근 플레이 기록(최근 50곡)을 가져옴.
-          방송이 끝나고 한 번 눌러주면 됨. 시간으로 맞추니까 같은 날 방송이면 순서대로 붙음.
+          녹화에서 나눈 곡에 곡명·난이도·달성률을 붙이기 위해 maimai DX NET의 최근 플레이 기록(최근 50곡)을 가져옵니다.
+          방송이 끝나고 한 번 눌러 주시면 됩니다. 시간으로 맞추기 때문에 같은 날 방송이면 순서대로 붙습니다.
         </p>
       </header>
 
@@ -47,7 +47,7 @@ export function MaimaiPage() {
           <CardTitle>PC (Chrome)</CardTitle>
           <ol className="steps">
             <li>
-              아래 버튼을 북마크바로 끌어다 놓기
+              아래 버튼을 북마크바로 끌어다 놓습니다
               <div className="steps__action">
                 <a ref={anchor} className="crl-btn crl-btn--primary" onClick={(e) => e.preventDefault()} draggable>
                   carol 기록 가져오기
@@ -58,9 +58,9 @@ export function MaimaiPage() {
               <a href={RECORD_URL} target="_blank" rel="noreferrer">
                 maimai DX NET 플레이 기록
               </a>
-              을 열고 그 북마크를 누름
+              을 열고 그 북마크를 누릅니다
             </li>
-            <li>새 탭에 carol live가 열리면 가져오기를 누름</li>
+            <li>새 탭에 carol live가 열리면 가져오기를 누릅니다</li>
           </ol>
         </Card>
 
@@ -75,20 +75,20 @@ export function MaimaiPage() {
                 </Button>
               </div>
             </li>
-            <li>아무 페이지나 북마크 → 북마크 수정 → 이름은 carol, URL 칸에 붙여넣기</li>
+            <li>아무 페이지나 북마크한 뒤 북마크 수정에서 이름은 carol로 하고 URL 칸에 붙여 넣습니다</li>
             <li>
               <a href={RECORD_URL} target="_blank" rel="noreferrer">
                 maimai DX NET 플레이 기록
               </a>
-              에서 주소창에 carol을 입력하고, 아래에 뜨는 북마크를 누름
+              에서 주소창에 carol을 입력하고, 아래에 뜨는 북마크를 누릅니다
             </li>
           </ol>
         </Card>
       </div>
 
       <p className="crl-helper maimai-note">
-        기록은 이 사이트(내 계정)에만 저장되고 maimai DX NET에 로그인 정보를 넘기지 않음. 북마크는 지금 보고 있는 기록
-        페이지와, 쇼츠 프로필 카드에 쓸 플레이어 데이터 페이지(닉네임·레이팅·아이콘·단·클래스·플레이 수)만 읽음.
+        기록은 이 사이트(내 계정)에만 저장되고 maimai DX NET 로그인 정보는 넘기지 않습니다. 북마크는 지금 보고 있는 기록
+        페이지와, 쇼츠 프로필 카드에 쓸 플레이어 데이터 페이지(닉네임·레이팅·아이콘·단·클래스·플레이 수)만 읽습니다.
       </p>
     </>
   );
@@ -130,9 +130,9 @@ export function ImportPage() {
   if (!plays || plays.length === 0) {
     return (
       <Card>
-        <CardTitle>가져올 기록이 없음</CardTitle>
+        <CardTitle>가져올 기록이 없습니다</CardTitle>
         <CardBody>
-          maimai DX NET 플레이 기록 페이지에서 북마크를 눌러서 열어야 함. <a {...link("/maimai")}>연결 방법 보기</a>
+          maimai DX NET 플레이 기록 페이지에서 북마크를 눌러서 열어야 합니다. <a {...link("/maimai")}>연결 방법 보기</a>
         </CardBody>
       </Card>
     );
@@ -154,10 +154,10 @@ export function ImportPage() {
       <Card className="import">
         {state === "done" && result ? (
           <>
-            <CardTitle>가져왔음</CardTitle>
+            <CardTitle>가져왔습니다</CardTitle>
             <CardBody>
-              새로 {result.added}곡 저장 (받은 기록 {result.received}곡). 이 시간대 녹화를 열면 곡 이름이 붙어 있음.
-              {result.profile ? " 프로필도 저장했음 (쇼츠 레거시 레이아웃에 씀)." : ""}
+              새로 {result.added}곡을 저장했습니다 (받은 기록 {result.received}곡). 이 시간대 녹화를 열면 곡 이름이 붙어 있습니다.
+              {result.profile ? " 프로필도 저장했습니다 (쇼츠의 프로필 카드에 씁니다)." : ""}
             </CardBody>
             <div className="panel-actions">
               <Button variant="primary" {...link("/")}>
@@ -168,9 +168,9 @@ export function ImportPage() {
         ) : (
           <>
             <CardBody>
-              내 carol live 계정에 아래 플레이 기록을 저장함. 이미 있는 기록은 겹치지 않음.
+              내 carol live 계정에 아래 플레이 기록을 저장합니다. 이미 있는 기록은 겹치지 않습니다.
               {profile
-                ? ` 프로필(${profile.name}${profile.rating != null ? ` · 레이팅 ${profile.rating}` : ""})도 같이 저장함.`
+                ? ` 프로필(${profile.name}${profile.rating != null ? ` · 레이팅 ${profile.rating}` : ""})도 같이 저장합니다.`
                 : ""}
             </CardBody>
             <div className="panel-actions">

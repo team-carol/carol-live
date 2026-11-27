@@ -75,6 +75,7 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 - android: 색·모서리·간격·글자 크기 hex/값은 `res/values/carol_tokens.xml`에만 있음. 레이아웃·drawable·코드는 `@color/crl_*`, `@dimen/crl_*`, `Crl.*` 스타일만 씀
 - web: 가능하면 `@team-carol/design-system` React 컴포넌트를 씀. `app.css`에는 `var(--crl-*)` 토큰만 쓰고 생 색상값을 넣지 않음
 - 폰트는 Pretendard. 화면 문구는 한국어
+- 사용자가 읽는 문장(앱·웹·서버 안내와 오류 문구, README)은 합니다체(~입니다/~습니다, 부탁은 ~해 주세요, 확인은 ~할까요?)로 씀. 버튼·태그·상태 같은 짧은 라벨(`저장됨`, `연결됨`, `기록 없음`)은 그대로 둠. 이 파일과 커밋·PR은 지금 말투 그대로
 
 ### android
 

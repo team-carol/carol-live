@@ -269,7 +269,7 @@ internal object Api {
       conn.outputStream.use { out ->
         while (left > 0) {
           val n = raf.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
-          if (n < 0) throw IOException("파일이 예상보다 짧음")
+          if (n < 0) throw IOException("파일이 예상보다 짧습니다")
           out.write(buf, 0, n)
           left -= n
           onBytes(n.toLong())
@@ -330,7 +330,7 @@ object Thumbnails {
       r.setDataSource(file.absolutePath)
       val atMs = minOf(10_000L, maxOf(0L, durationMs / 3))
       val frame = r.getScaledFrameAtTime(atMs * 1000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 480, 480)
-        ?: throw IOException("프레임을 못 뽑음")
+        ?: throw IOException("프레임을 뽑지 못했습니다")
       val out = java.io.ByteArrayOutputStream()
       frame.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
       frame.recycle()
@@ -372,7 +372,7 @@ class UploadWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         Log.w(TAG, "upload failed ${e.code}", e)
         when (e.code) {
           401 -> {
-            notify("기기 연결이 끊겼음. 앱 설정에서 다시 연결해줘")
+            notify("기기 연결이 끊겼습니다. 앱 설정에서 다시 연결해 주세요")
             return@withContext Result.failure()
           }
           413 -> {
@@ -410,7 +410,7 @@ class UploadWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
       item.parts.clear()
       UploadQueue.update(ctx, item)
       val deleted = res.optJSONArray("deleted")
-      if (deleted != null && deleted.length() > 0) notify("저장공간 확보를 위해 오래된 녹화 ${deleted.length()}개가 지워짐")
+      if (deleted != null && deleted.length() > 0) notify("저장공간 확보를 위해 오래된 녹화 ${deleted.length()}개가 지워졌습니다")
     }
 
     val size = file.length()
@@ -454,7 +454,7 @@ class UploadWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     val stored = done.optLong("size", -1)
     val deleted = UploadConfig.deleteAfterUpload(ctx) && stored == file.length() && Recordings.delete(ctx, file)
     if (UploadConfig.deleteAfterUpload(ctx) && !deleted) Log.w(TAG, "kept ${item.name}: server size $stored, local ${file.length()}")
-    notify(if (deleted) "${item.name} 업로드 완료 · 폰에서 지움" else "${item.name} 업로드 완료")
+    notify(if (deleted) "${item.name} 업로드 완료 · 폰에서 지웠습니다" else "${item.name} 업로드 완료")
   }
 
   private fun progress(name: String, sent: Long, total: Long) {

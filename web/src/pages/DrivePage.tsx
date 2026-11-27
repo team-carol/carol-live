@@ -116,7 +116,7 @@ export function DrivePage({ route }: { route: Extract<Route, { name: "recordings
 
   const remove = async (list: Recording[]) => {
     const what = list.length === 1 ? `'${dateTime(when(list[0]))}' 녹화를` : `녹화 ${list.length}개를`;
-    if (!confirm(`${what} 지울까? 되돌릴 수 없음`)) return;
+    if (!confirm(`${what} 지울까요? 되돌릴 수 없습니다`)) return;
     await Promise.all(list.map((r) => api.deleteRecording(r.id)));
     setSelected(new Set());
     load();
@@ -145,7 +145,7 @@ export function DrivePage({ route }: { route: Extract<Route, { name: "recordings
               <span className="side-nav__count">{f.count}</span>
             </a>
           ))}
-          {folders.length === 0 && <p className="side-nav__empty">아직 없음</p>}
+          {folders.length === 0 && <p className="side-nav__empty">아직 없습니다</p>}
         </nav>
 
         <div className="side-storage">
@@ -155,7 +155,7 @@ export function DrivePage({ route }: { route: Extract<Route, { name: "recordings
           <p className="crl-caption">
             팀 저장공간 {bytes(usage.used)} / {bytes(usage.cap)}
           </p>
-          <p className="crl-helper">가득 차면 팀 전체에서 가장 오래된 녹화부터 지워짐</p>
+          <p className="crl-helper">가득 차면 팀 전체에서 가장 오래된 녹화부터 지워집니다</p>
         </div>
       </aside>
 
@@ -247,8 +247,8 @@ export function DrivePage({ route }: { route: Extract<Route, { name: "recordings
           <div className="drive__empty">
             <p className="crl-body-sm">
               {items.length === 0
-                ? "아직 녹화가 없음. 폰 앱 설정 → 업로드에서 기기를 연결하고 방송하면, 끝난 뒤 자동으로 올라옴."
-                : "여기엔 파일이 없음."}
+                ? "아직 녹화가 없습니다. 폰 앱 설정 → 업로드에서 기기를 연결하고 방송하면, 끝난 뒤 자동으로 올라옵니다."
+                : "여기에는 파일이 없습니다."}
             </p>
           </div>
         )}

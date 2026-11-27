@@ -107,7 +107,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, (body as { error?: string }).error ?? `요청 실패 (${res.status})`);
+    throw new ApiError(res.status, (body as { error?: string }).error ?? `요청에 실패했습니다 (${res.status})`);
   }
   return res.json() as Promise<T>;
 }

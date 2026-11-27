@@ -10,7 +10,7 @@ import type { MaimaiProfileImport, PlayImport } from "../api";
 export function bookmarklet(origin: string): string {
   const code = `(function(){${scrapeSource}
 var p=scrapeMaimaiRecord(document);
-if(!p.length){alert("maimai DX NET의 플레이 기록(Record) 페이지에서 눌러줘");return}
+if(!p.length){alert("maimai DX NET의 플레이 기록(Record) 페이지에서 눌러 주세요");return}
 var sent=false;
 function go(f){if(sent)return;sent=true;var d={v:1,plays:p};if(f)d.profile=f;
 var u=${JSON.stringify(`${origin}/import`)}+"#"+encodeURIComponent(JSON.stringify(d));

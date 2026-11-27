@@ -58,7 +58,7 @@ class LiveService : Service() {
     instance = this
     getSystemService(NotificationManager::class.java).createNotificationChannel(
       NotificationChannel(CHANNEL, "방송·녹화 중", NotificationManager.IMPORTANCE_LOW).apply {
-        description = "방송이나 녹화가 진행 중일 때 표시됨"
+        description = "방송이나 녹화가 진행 중일 때 표시됩니다"
         setShowBadge(false)
       },
     )

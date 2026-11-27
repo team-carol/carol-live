@@ -78,7 +78,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
         onPermissionsReady()
       } else {
         txtState.text = "권한 필요"
-        toast("카메라랑 마이크 권한이 있어야 방송할 수 있음")
+        toast("카메라와 마이크 권한이 있어야 방송할 수 있습니다")
       }
     }
 
@@ -125,7 +125,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
       override fun handleOnBackPressed() {
         if (session.isActive) {
           // leaving keeps the broadcast running in the background (notification has a stop button)
-          toast("방송·녹화는 백그라운드에서 계속됨. 알림에서 종료할 수 있음")
+          toast("방송·녹화는 백그라운드에서 계속됩니다. 알림에서 종료할 수 있습니다")
         }
         finish()
       }
@@ -275,7 +275,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
   private fun confirmStop() {
     AlertDialog.Builder(this)
       .setTitle("방송 종료")
-      .setMessage(if (session.isRecording) "방송이랑 녹화를 같이 끝낼까?" else "방송을 끝낼까?")
+      .setMessage(if (session.isRecording) "방송과 녹화를 같이 끝낼까요?" else "방송을 끝낼까요?")
       .setPositiveButton("종료") { _, _ -> session.stopAll() }
       .setNegativeButton("취소", null)
       .show()
@@ -283,7 +283,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
 
   private fun openSettings() {
     if (session.isActive) {
-      toast("방송이나 녹화 중에는 설정을 못 바꿈")
+      toast("방송이나 녹화 중에는 설정을 바꿀 수 없습니다")
       return
     }
     settingsLauncher.launch(Intent(this, SettingsActivity::class.java))
@@ -402,8 +402,8 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     chatStatus.text = when (chat.status) {
       YouTubeChat.Status.SEARCHING -> "라이브 찾는 중…"
       YouTubeChat.Status.LIVE -> chat.detail ?: "연결됨"
-      YouTubeChat.Status.ENDED -> "방송이 끝남 · 새 방송 찾는 중"
-      YouTubeChat.Status.NEED_PAIRING -> "설정 → 업로드에서 서버에 연결해야 보임"
+      YouTubeChat.Status.ENDED -> "방송이 끝났습니다 · 새 방송을 찾는 중입니다"
+      YouTubeChat.Status.NEED_PAIRING -> "설정 → 업로드에서 서버에 연결해야 보입니다"
       else -> chat.detail ?: ""
     }
     chatStatus.setTextColor(
@@ -424,7 +424,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     val recent = chat.messages.takeLast(if (portrait) 10 else 6)
     chatList.removeAllViews()
     if (recent.isEmpty() && chat.status == YouTubeChat.Status.LIVE) {
-      chatList.addView(chatLine(SpannableStringBuilder("아직 채팅 없음"), R.color.crl_dim))
+      chatList.addView(chatLine(SpannableStringBuilder("아직 채팅이 없습니다"), R.color.crl_dim))
     }
     for (m in recent) chatList.addView(chatLine(messageText(m), R.color.crl_ink_2))
   }
