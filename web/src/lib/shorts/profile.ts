@@ -1,6 +1,7 @@
-// The player profile card of the legacy shorts layout: icon, title, name, rating, dan, class, stars, play count.
-// Every size, colour and vector here is taken from the mai-log Figma file (Frame 30 and its Dan / Otomo /
-// RatingSection components, which the frame uses at 1.15×).
+// The player profile card of the legacy shorts layout: icon, title, name, rating, dan, class, play count.
+// Sizes, colours and vectors are taken from the mai-log Figma file (Frame 30 and its Dan / Otomo / RatingSection
+// components, which the frame uses at 1.15×). Dan and class are maimai DX NET's own badge images; the Figma
+// badges are drawn only when an image is missing. The frame's "★ × N" is left out.
 import type { MaimaiProfile } from "../../api.ts";
 import { INK, SHADOW, WHITE, canvas, font, paint, plate, roundRect, shadowText, type Ctx, type Paint, type Stops } from "./draw.ts";
 import { classOf, danOf, ratingTier, type ClassTier, type RatingTier } from "./images.ts";
@@ -20,12 +21,9 @@ const DIAMOND_2 =
   "M45.5146 1.17188C47.0767 -0.390222 49.6098 -0.390222 51.1719 1.17188L78.5146 28.5146C80.0767 30.0767 80.0767 32.6098 78.5146 34.1719L51.1719 61.5146C49.6098 63.0767 47.0767 63.0767 45.5146 61.5146L40.0215 56.0215L34.1719 61.873C32.6098 63.4349 30.0767 63.435 28.5146 61.873L1.17187 34.5293C-0.390111 32.9673 -0.389998 30.4351 1.17187 28.873L28.5146 1.5293C30.0767 -0.0327861 32.6098 -0.032758 34.1719 1.5293L39.6641 7.02148L45.5146 1.17188Z";
 const DIAMOND_3 =
   "M62.5146 1.1709C64.0766 -0.390762 66.6089 -0.390692 68.1709 1.1709L95.5146 28.5146C97.0764 30.0767 97.0764 32.6088 95.5146 34.1709L68.1709 61.5146C66.6088 63.0764 64.0767 63.0764 62.5146 61.5146L56.8428 55.8428L51.1709 61.5146C49.6088 63.0764 47.0767 63.0764 45.5146 61.5146L39.8428 55.8428L34.1709 61.5146C32.6088 63.0764 30.0767 63.0764 28.5146 61.5146L1.1709 34.1709C-0.390694 32.6089 -0.390763 30.0766 1.1709 28.5146L28.5146 1.1709C30.0766 -0.390762 32.6089 -0.390692 34.1709 1.1709L39.8428 6.84277L45.5146 1.1709C47.0766 -0.390762 49.6089 -0.390692 51.1709 1.1709L56.8428 6.84277L62.5146 1.1709Z";
-/** small star beside the rating (48 px box) and the big one before the star count */
+/** small star beside the rating (48 px box) */
 const STAR_SMALL =
   "M11.0767 2.21993C11.4183 1.39864 12.5817 1.39864 12.9233 2.21993L14.9395 7.06735C15.0835 7.41358 15.4091 7.65015 15.7829 7.68012L21.0161 8.09966C21.9027 8.17074 22.2623 9.27725 21.5867 9.85592L17.5996 13.2713C17.3148 13.5153 17.1904 13.8981 17.2774 14.2628L18.4956 19.3695C18.702 20.2348 17.7607 20.9186 17.0016 20.455L12.5213 17.7184C12.2012 17.5229 11.7988 17.5229 11.4787 17.7184L6.9984 20.455C6.2393 20.9186 5.29805 20.2348 5.50444 19.3695L6.72257 14.2628C6.80958 13.8981 6.68521 13.5153 6.40042 13.2713L2.41328 9.85592C1.73774 9.27725 2.09727 8.17074 2.98392 8.09966L8.21712 7.68012C8.59091 7.65015 8.91652 7.41358 9.06052 7.06735L11.0767 2.21993Z";
-const STAR_BIG =
-  "M22.7839 0.999762C23.6975 -0.333254 25.6648 -0.333254 26.5783 0.999763L33.9525 11.7595C34.2516 12.1959 34.6919 12.5159 35.1994 12.6655L47.7113 16.3537C49.2613 16.8107 49.8693 18.6816 48.8838 19.9624L40.9294 30.3006C40.6068 30.7199 40.4386 31.2376 40.4531 31.7664L40.8117 44.8057C40.8562 46.4211 39.2646 47.5774 37.742 47.036L25.4517 42.6655C24.9533 42.4883 24.409 42.4883 23.9105 42.6655L11.6203 47.036C10.0976 47.5774 8.5061 46.4211 8.55053 44.8057L8.90915 31.7664C8.9237 31.2376 8.75549 30.7199 8.43289 30.3006L0.478467 19.9624C-0.506997 18.6816 0.100919 16.8107 1.651 16.3537L14.1629 12.6655C14.6703 12.5159 15.1107 12.1959 15.4098 11.7595L22.7839 0.999762Z";
-
 const GOLD: Stops = [[0.017, "#feed07"], [0.403, "#fffedf"], [0.984, "#edd620"]];
 const PALE_GOLD: Stops = [[0, "#fffa8a"], [0.4, "#fffedf"], [1, "#fff9b8"]];
 const HYPER: Stops = [[0.017, "#cd19ff"], [0.207, "#9676ff"], [0.463, "#b0d2ff"], [0.742, "#c0ff89"], [0.984, "#e06880"]];
@@ -125,7 +123,8 @@ function drawClass(ctx: Ctx, x: number, y: number, cls: { label: string; tier: C
 }
 
 /** draws the profile card with its top-left corner at 0,0 */
-export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, icon?: ImageBitmap) {
+export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, images: { icon?: ImageBitmap; dan?: ImageBitmap; cls?: ImageBitmap } = {}) {
+  const icon = images.icon;
   const { width: W, height: H } = PROFILE;
   ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
   roundRect(ctx, PROFILE.shadowX, PROFILE.shadowY, W, H, 9.2);
@@ -201,27 +200,23 @@ export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, icon?: ImageBi
   // one small star to the right of the rating, as in the frame
   plate(ctx, STAR_SMALL, ratingX + 150 * K + 4.6, y + 4.6, K, "#f0da83", 24, undefined, 2);
 
-  // dan, class, stars
+  // dan and class: the site's badges at the row height, else the Figma ones
   y = pad + 139.31;
   let cx = x;
+  const badge = (img: ImageBitmap) => {
+    const bw = (img.width / img.height) * 64 * K;
+    ctx.drawImage(img, cx, y, bw, 64 * K);
+    cx += bw + 18.4;
+  };
   const dan = danOf(profile.course);
-  if (dan) {
+  if (images.dan) badge(images.dan);
+  else if (dan) {
     drawDan(ctx, cx, y, dan);
     cx += 170 * K + 18.4;
   }
   const cls = classOf(profile.cls);
-  if (cls) {
-    drawClass(ctx, cx, y, cls);
-    cx += 133 * K + 18.4;
-  }
-  if (profile.stars != null) {
-    plate(ctx, STAR_BIG, cx + 13.8 + 2.92, y + 9.2 + 1.77, 1, "#ffe788", 50, { color: "#7b7355", width: 2.3 }, 3.45);
-    ctx.font = font(400, 34.5);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = INK;
-    ctx.fillText(`× ${profile.stars.toLocaleString("en-US")}`, cx + 13.8 + 55.2 + 9.2, y + 37.5);
-  }
+  if (images.cls) badge(images.cls);
+  else if (cls) drawClass(ctx, cx, y, cls);
 
   // play count: total / this version
   if (profile.playCount != null) {
@@ -241,8 +236,3 @@ export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, icon?: ImageBi
   }
 }
 
-export function renderProfileCard(profile: MaimaiProfile, icon?: ImageBitmap): HTMLCanvasElement {
-  const c = canvas(PROFILE.width + PROFILE.shadowX, PROFILE.height + PROFILE.shadowY);
-  drawProfileCard(c.getContext("2d")!, profile, icon);
-  return c;
-}

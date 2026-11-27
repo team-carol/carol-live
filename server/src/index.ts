@@ -405,6 +405,8 @@ function cleanProfile(input: unknown): Record<string, string | number> | null {
   if (typeof p.trophy === "string") out.trophy = p.trophy.trim().slice(0, 80);
   if (typeof p.trophyRank === "string" && /^[A-Za-z]{1,12}$/.test(p.trophyRank)) out.trophyRank = p.trophyRank;
   if (typeof p.ratingBase === "string" && /^[a-z_]{1,24}$/.test(p.ratingBase)) out.ratingBase = p.ratingBase;
+  if (typeof p.courseImg === "string" && /^course_rank_[0-9A-Za-z]{1,24}$/.test(p.courseImg)) out.courseImg = p.courseImg;
+  if (typeof p.classImg === "string" && /^class_rank_s_[0-9A-Za-z]{1,24}$/.test(p.classImg)) out.classImg = p.classImg;
   const icon = typeof p.icon === "string" ? /img\/Icon\/([0-9a-f]{8,32})\.png/.exec(p.icon)?.[1] : undefined;
   if (icon) out.icon = icon;
   return out;
@@ -418,12 +420,13 @@ app.get("/api/maimai/profile", requireUser, async (c) => {
 });
 
 /**
- * maimai DX NET images (jacket, ST/DX badge, rank, FC/sync marks, player icon) for the shorts card.
+ * maimai DX NET images (jacket, ST/DX badge, rank, FC/sync marks, player icon, dan and class badges) for the shorts cards.
  * The browser can't draw them onto a canvas straight from maimai DX NET (no CORS header), so they pass
  * through here. Only these image paths are allowed, they need no maimai login, and nothing is stored.
  */
 const MAIMAI_IMG_BASE = "https://maimaidx-eng.com/maimai-mobile/img/";
-const MAIMAI_IMG_PATH = /^((Music|Icon)\/[0-9a-f]{8,32}|playlog\/[a-z0-9_]{1,24}|music_(dx|standard)|diff_[a-z]{1,12})\.png$/;
+const MAIMAI_IMG_PATH =
+  /^((Music|Icon)\/[0-9a-f]{8,32}|playlog\/[a-z0-9_]{1,24}|course\/course_rank_[0-9A-Za-z]{1,24}|class\/class_rank_s_[0-9A-Za-z]{1,24}|music_(dx|standard)|diff_[a-z]{1,12})\.png$/;
 const MAIMAI_IMG_MAX_BYTES = 2 * 1024 * 1024;
 
 app.get("/api/maimai/img/:dir{[A-Za-z]+}/:file", requireUser, (c) => maimaiImage(c, `${c.req.param("dir")}/${c.req.param("file")}`));

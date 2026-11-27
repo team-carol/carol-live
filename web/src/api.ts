@@ -75,6 +75,9 @@ export interface MaimaiProfile {
   course?: number;
   /** class_rank_s_<n>: 0 = B5 … 24 = SSS1, 25 = LEGEND */
   cls?: number;
+  /** file names (no .png) of the dan and class badges under img/course/ and img/class/ */
+  courseImg?: string;
+  classImg?: string;
   stars?: number;
   playCount?: number;
   playCountCurrent?: number;

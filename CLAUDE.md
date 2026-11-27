@@ -41,7 +41,7 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 - `web/src/lib/chapters.ts`: 곡 목록 → 유튜브 설명란 챕터 (0:00 시작, 3개 이상, 10초 이상 규칙)
 - `web/src/lib/shorts/`: 곡 구간 → 쇼츠 mp4. 수치·색·벡터는 전부 Figma mai-log 파일에서 옴
   - `layout.ts`: 레이아웃(`cardLayout` 곡 카드만 / `legacyLayout` 예전 레이아웃, 파란 배경 선택)과 `drawFrame`. 미리보기와 인코더가 같은 함수로 그림
-  - `card.ts`(곡 카드, `card`/`legacy` 스타일), `profile.ts`(프로필 카드: 레이팅 틀·단·클래스 배지), `draw.ts`(공통 캔버스 도구)
+  - `card.ts`(곡 카드, `card`/`legacy` 스타일), `profile.ts`(프로필 카드: 레이팅 틀은 Figma, 단·클래스는 maimai DX NET 이미지이고 못 받을 때만 Figma 배지), `draw.ts`(공통 캔버스 도구)
   - `images.ts`: maimai DX NET 이미지 경로와 번호 → 단/클래스/레이팅 색 (순수 함수, node 테스트)
   - `render.ts`: mediabunny로 디코드 → 오버레이 얹기 → H.264 인코드, 오디오는 복사. 편집 화면에서 필요할 때만 불러옴
 - `web/src/lib/maimaiLabels.ts`: 난이도·랭크·FC/AP 라벨과 게임 색(`@team-carol/design-system/game`). node 테스트에서도 불러오게 번들러 전용 import 금지
@@ -110,7 +110,7 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 - 기기 토큰은 서버에 sha256 해시로만 저장. 페어링은 앱이 만든 nonce가 돌아와야만 받아들임
 - 웹 API는 항상 로그인한 사용자 본인의 녹화만 돌려줌 (`user_id` 조건 빠뜨리지 않기). maimai 기록(`plays`)도 마찬가지
 - maimai DX NET 로그인 정보는 다루지 않음. 북마클릿은 사용자가 보고 있는 기록 페이지의 DOM과, 같은 사이트의 플레이어 데이터 페이지(프로필)만 읽고, 데이터는 URL fragment로 `/import`에 넘김. 읽는 범위를 넓히면 `MaimaiPage`의 안내 문구도 같이 고침
-- `/api/maimai/img/*`는 maimai DX NET 이미지 중계. 정해진 경로(`Music/`, `Icon/`, `playlog/`, `music_*`, `diff_*`의 png)만 통과시키고 로그인한 사용자만 씀. 아무 주소나 받아오게 넓히지 않음.
+- `/api/maimai/img/*`는 maimai DX NET 이미지 중계. 정해진 경로(`Music/`, `Icon/`, `playlog/`, `course/`, `class/`, `music_*`, `diff_*`의 png)만 통과시키고 로그인한 사용자만 씀. 아무 주소나 받아오게 넓히지 않음.
   게임 이미지는 레포에 넣지 않고 그때그때 받아옴
 
 ## 릴리스

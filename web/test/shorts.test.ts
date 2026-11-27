@@ -43,6 +43,11 @@ test("footage is scaled to cover the 9:16 frame", () => {
 test("the player icon goes through the same image path", () => {
   assert.deepEqual(cardImageUrls(play({}), { icon: "39c1bbf3be79bcc5" }), { icon: "/api/maimai/img/Icon/39c1bbf3be79bcc5.png" });
   assert.deepEqual(cardImageUrls(play({}), { icon: "../x" }), {});
+  assert.deepEqual(cardImageUrls(play({}), { courseImg: "course_rank_15DlEMWlRz", classImg: "class_rank_s_20OmGGNvGh" }), {
+    dan: "/api/maimai/img/course/course_rank_15DlEMWlRz.png",
+    cls: "/api/maimai/img/class/class_rank_s_20OmGGNvGh.png",
+  });
+  assert.deepEqual(cardImageUrls(play({}), { courseImg: "course_rank_../x", classImg: "class_rank_20" }), {});
 });
 
 test("maimai DX NET image numbers map to dan and class names", () => {

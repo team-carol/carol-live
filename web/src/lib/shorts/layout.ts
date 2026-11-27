@@ -72,7 +72,7 @@ export function legacyLayout(play: Play, profile: MaimaiProfile | null, images: 
   if (profile) {
     ctx.save();
     ctx.translate(PROFILE.x, PROFILE.y);
-    drawProfileCard(ctx, profile, images.icon);
+    drawProfileCard(ctx, profile, images);
     ctx.restore();
   }
   return { footage: opts.background ? LEGACY.footage : FULL, align: opts.align, zoom: opts.zoom, overlay };

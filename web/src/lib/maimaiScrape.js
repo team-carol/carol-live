@@ -80,6 +80,9 @@ function scrapeMaimaiProfile(doc) {
   const counts = (((box.parentElement || doc).querySelector(".t_r.f_12") || {}).textContent || "").match(/\d[\d,]*/g) || [];
   const course = src(/course\/course_rank_(\d+)/);
   const cls = src(/class\/class_rank_s_(\d+)/);
+  // the image files themselves (their names end in a random-looking suffix), drawn on the profile card
+  const courseImg = src(/course\/(course_rank_[0-9A-Za-z]+)\.png/);
+  const classImg = src(/class\/(class_rank_s_[0-9A-Za-z]+)\.png/);
   return {
     name,
     rating: num((box.querySelector(".rating_block") || {}).textContent),
@@ -89,6 +92,8 @@ function scrapeMaimaiProfile(doc) {
     icon: imgs.find((s) => /img\/Icon\//.test(s)) || undefined,
     course: course === null ? undefined : Number(course),
     cls: cls === null ? undefined : Number(cls),
+    courseImg: courseImg || undefined,
+    classImg: classImg || undefined,
     stars: star ? num(star.parentElement.textContent) : undefined,
     playCountCurrent: counts.length > 1 ? num(counts[0]) : undefined,
     playCount: counts.length ? num(counts[counts.length - 1]) : undefined,
