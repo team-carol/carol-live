@@ -641,7 +641,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
           maxLength={5}
           inputMode="decimal"
           placeholder={play.details?.level ?? "14.6"}
-          helperText="14.6처럼 직접 고칠 수 있고 이 곡은 다음에도 기억함"
+          helperText="14.6처럼 직접 고칠 수 있고, 이 곡은 다음에도 기억합니다"
           disabled={busy}
           onChange={(e) => {
             setLevel(e.target.value);
@@ -691,8 +691,8 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
         </button>
         {noProfile && !editing && (
           <p className="crl-helper">
-            프로필이 아직 없어서 카드가 안 나옴. <a {...link("/maimai")}>maimai 메뉴</a>의 북마크를 새로 등록해 기록 페이지에서 한 번 누르거나, 위
-            버튼으로 직접 적으면 됨.
+            프로필이 아직 없어서 카드가 나오지 않습니다. <a {...link("/maimai")}>maimai 메뉴</a>의 북마크를 새로 등록해 기록 페이지에서 한 번 누르거나, 위
+            버튼으로 직접 적으시면 됩니다.
           </p>
         )}
       </>
@@ -717,7 +717,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
         </button>
       </div>
       <p className="crl-card__body">
-        {play.title} · {clock(from)}~{clock(to)} ({clock(length)}). 구간은 "구간 자르기"의 시작·끝을 그대로 씀.
+        {play.title} · {clock(from)}~{clock(to)} ({clock(length)}). 구간은 "구간 자르기"의 시작·끝을 그대로 씁니다.
       </p>
 
       <div className="shorts__body">
@@ -734,7 +734,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
             onPointerCancel={onPointerUp}
             onPointerLeave={() => setHover(null)}
             onKeyDown={onKeyDown}
-            aria-label="쇼츠 미리보기. 요소를 눌러 고르고 끌어서 옮김"
+            aria-label="쇼츠 미리보기. 요소를 눌러 고르고 끌어서 옮깁니다"
           />
           <div className="shorts__tools">
             <button type="button" className="crl-chip nudge" disabled={busy} onClick={() => (playing ? video.current?.pause() : onPlayRange())}>
@@ -748,7 +748,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
             </button>
           </div>
           <p className="crl-helper shorts__hint">
-            눌러서 고르고 끌어서 옮김 (선에 붙음, Alt를 누르면 자유롭게) · 모서리 점을 끌면 크기 · 방향키로 조금씩 · 빈 곳을 끌면 영상 · Ctrl+Z 실행 취소
+            요소를 눌러서 고르고 끌어서 옮깁니다. 끌 때는 맞춤선에 붙고, Alt를 누르면 자유롭게 움직입니다. 모서리 점을 끌면 크기가 바뀌고, 방향키로 조금씩 옮길 수 있습니다. 빈 곳을 끌면 영상이 움직입니다. Ctrl+Z로 실행을 취소합니다.
           </p>
         </div>
 
@@ -809,7 +809,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
                 maxLength={SAVED_NAME_MAX}
                 autoFocus
                 placeholder="예: 세로 영상"
-                helperText={saved.some((x) => x.name === naming.trim()) ? "같은 이름이 있어서 덮어씀" : undefined}
+                helperText={saved.some((x) => x.name === naming.trim()) ? "같은 이름이 있어서 덮어씁니다" : undefined}
                 onChange={(e) => setNaming(e.target.value)}
               />
               <div className="nudges">
@@ -868,10 +868,10 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
       {editing && profile !== undefined && <ProfileEditor profile={profile} disabled={busy} onChange={setProfile} />}
 
       {length > SHORTS_MAX_SECONDS && (
-        <p className="crl-helper crl-helper--error">유튜브 쇼츠는 3분까지임. 지금 구간은 {clock(length)}라 일반 영상으로 올라감.</p>
+        <p className="crl-helper crl-helper--error">유튜브 쇼츠는 3분까지입니다. 지금 구간은 {clock(length)}이라 일반 영상으로 올라갑니다.</p>
       )}
       {supported === false && (
-        <p className="crl-helper crl-helper--error">이 브라우저는 영상 인코딩(WebCodecs H.264)을 지원하지 않음. 크롬이나 엣지에서 해줘.</p>
+        <p className="crl-helper crl-helper--error">이 브라우저는 영상 인코딩(WebCodecs H.264)을 지원하지 않습니다. 크롬이나 엣지에서 열어 주세요.</p>
       )}
 
       <div className="panel-actions">
@@ -890,11 +890,11 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onP
           <div className="shorts__bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
             <div style={{ width: `${progress * 100}%` }} />
           </div>
-          <p className="crl-helper">인코딩 중… {Math.round(progress * 100)}%. 이 탭을 열어둬야 함. 영상 길이만큼 걸릴 수 있음.</p>
+          <p className="crl-helper">인코딩 중… {Math.round(progress * 100)}%. 이 탭을 열어 두어야 합니다. 영상 길이만큼 걸릴 수 있습니다.</p>
         </>
       )}
       {error && <p className="crl-helper crl-helper--error">{error}</p>}
-      <p className="crl-helper">1080×1920으로 다시 인코딩함. 소리는 원본 그대로. 고친 구성은 이 브라우저에 기억됨.</p>
+      <p className="crl-helper">1080×1920으로 다시 인코딩합니다. 소리는 원본 그대로입니다. 고친 구성은 이 브라우저에 기억됩니다.</p>
     </Card>
   );
 }

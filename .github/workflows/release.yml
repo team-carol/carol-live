@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "버전 (예: 0.5.0). main의 최신 커밋에 v태그를 만들고 릴리스함"
+        description: "버전 (예: 0.5.0). main의 최신 커밋에 v태그를 만들고 릴리스합니다"
         required: true
 
 permissions:

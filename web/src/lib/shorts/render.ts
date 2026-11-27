@@ -61,7 +61,7 @@ export async function renderShorts(req: ShortsRequest): Promise<{ blob: Blob; du
       },
     });
     if (!conversion.isValid || !conversion.utilizedTracks.some((t) => t.type === "video")) {
-      throw new Error("이 브라우저에서는 이 영상을 다시 인코딩할 수 없음. 크롬이나 엣지에서 해봐줘");
+      throw new Error("이 브라우저에서는 이 영상을 다시 인코딩할 수 없습니다. 크롬이나 엣지에서 다시 해 주세요");
     }
     conversion.onProgress = (p) => req.onProgress?.(p);
     const abort = () => void conversion.cancel();
@@ -72,7 +72,7 @@ export async function renderShorts(req: ShortsRequest): Promise<{ blob: Blob; du
       req.signal?.removeEventListener("abort", abort);
     }
     const buffer = (output.target as BufferTarget).buffer;
-    if (!buffer) throw new Error("쇼츠 파일을 만들지 못했음");
+    if (!buffer) throw new Error("쇼츠 파일을 만들지 못했습니다");
     return { blob: new Blob([buffer], { type: "video/mp4" }), duration: req.to - req.from };
   } finally {
     input.dispose();

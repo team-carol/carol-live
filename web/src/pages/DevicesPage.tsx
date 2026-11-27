@@ -21,14 +21,14 @@ export function DevicesPage() {
       <header className="page-head">
         <h1 className="crl-heading-2">기기</h1>
         <p className="crl-body-sm">
-          녹화를 올릴 수 있는 폰 목록. 폰 앱 설정 → 업로드 → <b>연결하기</b>로 추가함. 이름을 바꾸면 이미 올라온 녹화의 폴더 이름도
-          같이 바뀜.
+          녹화를 올릴 수 있는 폰 목록입니다. 폰 앱 설정 → 업로드 → <b>연결하기</b>로 추가합니다. 이름을 바꾸면 이미 올라온 녹화의 폴더 이름도
+          같이 바뀝니다.
         </p>
       </header>
       {error && <p className="crl-helper crl-helper--error">{error}</p>}
       {items?.length === 0 && (
         <Card className="empty">
-          <p className="crl-card__body">연결된 기기가 없음.</p>
+          <p className="crl-card__body">연결된 기기가 없습니다.</p>
         </Card>
       )}
       <div className="rec-list">
@@ -55,7 +55,7 @@ function DeviceRow({ d, onChange }: { d: DeviceInfo; onChange: () => void }) {
   };
 
   const disconnect = async () => {
-    if (!confirm(`${d.name} 연결을 끊을까? 그 폰은 다시 연결하기 전까지 업로드를 못 함`)) return;
+    if (!confirm(`${d.name} 연결을 끊을까요? 그 폰은 다시 연결하기 전까지 업로드할 수 없습니다`)) return;
     await api.removeDevice(d.id);
     onChange();
   };

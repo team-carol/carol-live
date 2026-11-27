@@ -33,7 +33,7 @@ export function pairedPage(deviceName: string, appUrl: string): string {
     `<div class="crl-card">
       <span class="crl-tag crl-tag--success">연결됨</span>
       <h1 class="crl-card__title" style="margin-top:12px">${esc(deviceName)}</h1>
-      <p class="crl-card__body">이 폰에서 녹화한 영상은 이 이름의 폴더로 올라감. 아래 버튼을 눌러 앱으로 돌아가면 끝.</p>
+      <p class="crl-card__body">이 폰에서 녹화한 영상은 이 이름의 폴더로 올라갑니다. 아래 버튼을 눌러 앱으로 돌아가면 끝입니다.</p>
       <div class="actions">
         <a class="crl-btn crl-btn--primary crl-btn--lg" href="${esc(appUrl)}">앱으로 돌아가기</a>
       </div>
@@ -44,7 +44,7 @@ export function pairedPage(deviceName: string, appUrl: string): string {
 
 export function errorPage(message: string): string {
   return shell(
-    "문제가 생김",
+    "문제가 생겼습니다",
     `<div class="crl-card">
       <span class="crl-tag crl-tag--danger">오류</span>
       <p class="crl-card__body">${esc(message)}</p>

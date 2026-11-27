@@ -162,7 +162,7 @@ const requireDevice: MiddlewareHandler<App> = async (c, next) => {
   const device = await c.env.DB.prepare("SELECT id, user_id, name FROM devices WHERE token_hash = ?")
     .bind(await sha256(token))
     .first<Device>();
-  if (!device) return c.json({ error: "unknown device (연결이 끊겼을 수 있음)" }, 401);
+  if (!device) return c.json({ error: "unknown device (연결이 끊겼을 수 있습니다)" }, 401);
   await c.env.DB.prepare("UPDATE devices SET last_seen_at = ? WHERE id = ?").bind(now(), device.id).run();
   c.set("device", device);
   await next();
@@ -171,7 +171,7 @@ const requireDevice: MiddlewareHandler<App> = async (c, next) => {
 // ------------------------------------------------------------------ auth
 
 app.get("/auth/login", (c) => {
-  if (!c.env.DISCORD_CLIENT_ID) return c.html(errorPage("서버에 DISCORD_CLIENT_ID가 설정되지 않음"), 500);
+  if (!c.env.DISCORD_CLIENT_ID) return c.html(errorPage("서버에 DISCORD_CLIENT_ID가 설정되지 않았습니다"), 500);
   const state = randomToken(16);
   setCookie(c, STATE_COOKIE, state, { httpOnly: true, secure: secure(c), sameSite: "Lax", path: "/auth", maxAge: 600 });
   const redirect = new URL("/auth/callback", c.req.url).toString();
@@ -189,7 +189,7 @@ app.get("/auth/callback", async (c) => {
   const state = c.req.query("state");
   const code = c.req.query("code");
   if (!code || !state || state !== getCookie(c, STATE_COOKIE)) {
-    return c.html(errorPage("로그인 요청이 만료됐음. 다시 시도해줘"), 400);
+    return c.html(errorPage("로그인 요청이 만료됐습니다. 다시 시도해 주세요"), 400);
   }
   deleteCookie(c, STATE_COOKIE, { path: "/auth" });
 
@@ -204,16 +204,16 @@ app.get("/auth/callback", async (c) => {
       redirect_uri: new URL("/auth/callback", c.req.url).toString(),
     }),
   });
-  if (!tokenRes.ok) return c.html(errorPage("디스코드 로그인 실패"), 502);
+  if (!tokenRes.ok) return c.html(errorPage("디스코드 로그인에 실패했습니다"), 502);
   const { access_token } = await tokenRes.json<{ access_token: string }>();
   const meRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
-  if (!meRes.ok) return c.html(errorPage("디스코드 계정 정보를 못 가져옴"), 502);
+  if (!meRes.ok) return c.html(errorPage("디스코드 계정 정보를 가져오지 못했습니다"), 502);
   const me = await meRes.json<{ id: string; username: string; global_name?: string; avatar?: string }>();
 
   if (!allowed(c.env, me.id)) {
-    return c.html(errorPage(`팀 캐롤 멤버만 쓸 수 있음. 관리자에게 디스코드 ID ${me.id}를 추가해달라고 해줘`), 403);
+    return c.html(errorPage(`팀 캐롤 멤버만 쓸 수 있습니다. 관리자에게 디스코드 ID ${me.id}를 추가해 달라고 요청해 주세요`), 403);
   }
   const user: User = {
     id: me.id,
@@ -249,8 +249,8 @@ app.get("/auth/dev", async (c) => {
 app.get("/auth/device", async (c) => {
   const name = cleanDeviceName(c.req.query("name"));
   const nonce = c.req.query("nonce") ?? "";
-  if (!name) return c.html(errorPage("기기 이름이 비어 있음"), 400);
-  if (!/^[A-Za-z0-9_-]{8,64}$/.test(nonce)) return c.html(errorPage("앱에서 연결하기를 다시 눌러줘"), 400);
+  if (!name) return c.html(errorPage("기기 이름이 비어 있습니다"), 400);
+  if (!/^[A-Za-z0-9_-]{8,64}$/.test(nonce)) return c.html(errorPage("앱에서 연결하기를 다시 눌러 주세요"), 400);
   const user = await sessionUser(c);
   if (user) return pairDevice(c, user, { name, nonce });
   setCookie(c, PAIR_COOKIE, encodeURIComponent(JSON.stringify({ name, nonce })), {
@@ -350,7 +350,7 @@ app.post("/api/plays", requireUser, async (c) => {
     const details = p.details && typeof p.details === "object" ? JSON.stringify(p.details).slice(0, 2000) : null;
     return [{ playedAt, track, title, difficulty, achievement, details }];
   });
-  if (!rows.length) return c.json({ error: "가져올 플레이 기록이 없음" }, 400);
+  if (!rows.length) return c.json({ error: "가져올 플레이 기록이 없습니다" }, 400);
 
   const before = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM plays WHERE user_id = ?").bind(user.id).first<{ n: number }>();
   const stmt = c.env.DB.prepare(
@@ -413,7 +413,7 @@ function cleanProfile(input: unknown): Record<string, string | number> | null {
 /** the profile typed or corrected by hand on the web (the next bookmarklet import replaces it again) */
 app.put("/api/maimai/profile", requireUser, async (c) => {
   const profile = cleanProfile(await c.req.json().catch(() => null));
-  if (!profile) return c.json({ error: "닉네임은 꼭 있어야 함" }, 400);
+  if (!profile) return c.json({ error: "닉네임은 꼭 있어야 합니다" }, 400);
   const t = now();
   await c.env.DB.prepare(
     `INSERT INTO maimai_profiles (user_id, data, updated_at) VALUES (?, ?, ?)
@@ -451,7 +451,7 @@ async function maimaiImage(c: Ctx, path: string): Promise<Response> {
   );
   const length = Number(res?.headers.get("Content-Length") ?? 0);
   if (!res?.ok || !(res.headers.get("Content-Type") ?? "").startsWith("image/") || length > MAIMAI_IMG_MAX_BYTES) {
-    return c.json({ error: "이미지를 못 받아옴" }, 502);
+    return c.json({ error: "이미지를 받아오지 못했습니다" }, 502);
   }
   return new Response(res.body, {
     headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=604800" },
@@ -538,7 +538,7 @@ app.get("/api/devices", requireUser, async (c) => {
 app.patch("/api/devices/:id", requireUser, async (c) => {
   const body = await c.req.json<{ name?: string }>().catch(() => ({}) as { name?: string });
   const name = cleanDeviceName(body.name);
-  if (!name) return c.json({ error: "이름이 비어 있음" }, 400);
+  if (!name) return c.json({ error: "이름이 비어 있습니다" }, 400);
   const res = await c.env.DB.prepare("UPDATE devices SET name = ? WHERE id = ? AND user_id = ?")
     .bind(name, c.req.param("id"), c.get("user").id)
     .run();
@@ -617,11 +617,11 @@ app.post("/api/device/uploads", requireDevice, async (c) => {
   const size = Number(body.size);
   const filename = (body.filename ?? "").replace(/[\\/]/g, "_").slice(0, 120);
   if (!filename.toLowerCase().endsWith(".mp4") || !Number.isFinite(size) || size <= 0) {
-    return c.json({ error: "filename(.mp4)과 size가 필요함" }, 400);
+    return c.json({ error: "filename(.mp4)과 size가 필요합니다" }, 400);
   }
 
   const room = await makeRoom(c.env, size);
-  if (!room.ok) return c.json({ error: "저장 한도보다 큰 파일이라 올릴 수 없음" }, 413);
+  if (!room.ok) return c.json({ error: "저장 한도보다 큰 파일이라 올릴 수 없습니다" }, 413);
 
   const recId = id();
   const key = `recordings/${device.user_id}/${keyPart(device.name)}/${recId}_${filename}`;

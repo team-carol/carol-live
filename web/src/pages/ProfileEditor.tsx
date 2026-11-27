@@ -103,8 +103,8 @@ export function ProfileEditor({ profile, disabled, onChange }: Props) {
       </div>
       {error && <p className="crl-helper crl-helper--error">{error}</p>}
       <p className="crl-helper">
-        고치면 미리보기에 바로 보이고, 저장하면 다음에도 씀. 단·클래스를 직접 고르면 그린 배지로 나옴. 아이콘은 북마크로만 가져올 수 있고,
-        북마크를 다시 누르면 그때 값으로 덮어씀.
+        고치면 미리보기에 바로 보이고, 저장하면 다음에도 씁니다. 단·클래스를 직접 고르면 그린 배지로 나옵니다. 아이콘은 북마크로만 가져올 수 있고,
+        북마크를 다시 누르면 그때 값으로 덮어씁니다.
       </p>
     </div>
   );

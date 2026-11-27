@@ -70,22 +70,22 @@ class SummaryActivity : AppCompatActivity() {
     when {
       s.files.isEmpty() -> upload.visibility = View.GONE
       paired == null -> {
-        upload.text = "설정 → 업로드에서 기기를 연결하면 웹에서 보고 자를 수 있음. 녹화는 폰의 Movies/CarolLive에 있음"
+        upload.text = "설정 → 업로드에서 기기를 연결하면 웹에서 보고 자를 수 있습니다. 녹화는 폰의 Movies/CarolLive에 있습니다"
         uploadNow.text = "설정 열기"
         uploadNow.visibility = View.VISIBLE
         uploadNow.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
       }
       UploadConfig.autoUpload(this) -> {
         val net = if (UploadConfig.allowMobileData(this)) "인터넷" else "와이파이"
-        upload.text = "${net}에 연결되면 '${paired.deviceName}' 폴더로 자동 업로드됨. 진행 상황은 알림에 뜸"
+        upload.text = "${net}에 연결되면 '${paired.deviceName}' 폴더로 자동 업로드됩니다. 진행 상황은 알림에 표시됩니다"
       }
       else -> {
-        upload.text = "자동 업로드가 꺼져 있음"
+        upload.text = "자동 업로드가 꺼져 있습니다"
         uploadNow.text = "지금 업로드"
         uploadNow.visibility = View.VISIBLE
         uploadNow.setOnClickListener {
           Uploads.schedule(this)
-          upload.text = "업로드 예약됨. 진행 상황은 알림에 뜸"
+          upload.text = "업로드를 예약했습니다. 진행 상황은 알림에 표시됩니다"
           uploadNow.visibility = View.GONE
         }
       }

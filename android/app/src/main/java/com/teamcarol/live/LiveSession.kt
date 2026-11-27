@@ -161,11 +161,11 @@ object LiveSession : ConnectChecker {
     prepareError = null
     var res = settings.resolution
     if (!cameraInfo.supportsSize(res.width, res.height)) {
-      message("카메라가 ${res.label}를 지원 안 해서 720p로 바꿈")
+      message("카메라가 ${res.label}를 지원하지 않아 720p로 바꿨습니다")
       res = Resolution.HD
     }
     val maxFps = cameraInfo.maxFpsFor(res.width, res.height)
-    if (maxFps < settings.fps) message("${res.label}에서 카메라 최대 ${maxFps}fps라 ${settings.fps}fps가 안 나올 수 있음")
+    if (maxFps < settings.fps) message("${res.label}에서 카메라 최대 ${maxFps}fps라 ${settings.fps}fps가 나오지 않을 수 있습니다")
 
     val rotation = if (settings.orientation == StreamOrientation.PORTRAIT) 90 else 0
     val streamBps = settings.videoBitrateKbps * 1000
@@ -186,14 +186,14 @@ object LiveSession : ConnectChecker {
     }
     if (!videoOk) {
       prepareError = "영상 설정 실패"
-      message("영상 인코더 준비 실패. 해상도나 비트레이트를 바꿔봐")
+      message("영상 인코더를 준비하지 못했습니다. 해상도나 비트레이트를 바꿔 보세요")
       return false
     }
     activeResolution = res
     routeMic()
     if (!prepareAudio()) {
       prepareError = "오디오 설정 실패"
-      message("마이크 준비 실패")
+      message("마이크를 준비하지 못했습니다")
       return false
     }
     return true
@@ -223,7 +223,7 @@ object LiveSession : ConnectChecker {
         m.setAudioEffect(
           MicEffects(activity, settings.clickLimiter.params?.let { ClickLimiter(settings.sampleRate, channels, it) }),
         )
-        if (source != wanted) message("마이크 모드를 ${MicMode.labelOf(source)}(으)로 대체함")
+        if (source != wanted) message("마이크 모드를 ${MicMode.labelOf(source)}(으)로 대체했습니다")
         return true
       }
     }
@@ -241,13 +241,13 @@ object LiveSession : ConnectChecker {
   private val deviceCallback = object : AudioDeviceCallback() {
     override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
       routeMic()
-      if (addedDevices.any { it.isSource && AudioInputs.isUsb(it) }) message("USB 마이크 연결됨: $micLabel")
+      if (addedDevices.any { it.isSource && AudioInputs.isUsb(it) }) message("USB 마이크가 연결됐습니다: $micLabel")
       changed()
     }
 
     override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
       routeMic()
-      if (removedDevices.any { it.isSource && AudioInputs.isUsb(it) }) message("USB 마이크가 빠짐 → $micLabel")
+      if (removedDevices.any { it.isSource && AudioInputs.isUsb(it) }) message("USB 마이크가 빠졌습니다 → $micLabel")
       changed()
     }
   }
@@ -318,10 +318,10 @@ object LiveSession : ConnectChecker {
 
   /** @return an error message for the user, or null when the stream is starting */
   fun startStream(): String? {
-    val s = stream ?: return "아직 준비가 안 됨"
-    if (!prepared) return prepareError ?: "아직 준비가 안 됨"
+    val s = stream ?: return "아직 준비되지 않았습니다"
+    if (!prepared) return prepareError ?: "아직 준비되지 않았습니다"
     if (s.isStreaming) return null
-    if (!settings.hasKey) return "설정에서 스트림 키부터 넣어줘"
+    if (!settings.hasKey) return "설정에서 스트림 키부터 넣어 주세요"
     beginSession().streamed = true
     userStopped = false
     liveSince = 0L
@@ -356,8 +356,8 @@ object LiveSession : ConnectChecker {
     if (!prepared || s.isRecording) return
     val free = Recordings.freeBytes()
     if (free < Recordings.START_MIN_FREE_BYTES) {
-      val tail = if (auto) " 방송은 그대로 진행함" else ""
-      message("저장공간이 ${Recordings.gigabytes(free)}밖에 없어서 녹화 안 함.$tail")
+      val tail = if (auto) " 방송은 그대로 진행합니다." else ""
+      message("저장공간이 ${Recordings.gigabytes(free)}밖에 없어서 녹화하지 않습니다.$tail")
       return
     }
     val file = Recordings.newFile()
@@ -365,7 +365,7 @@ object LiveSession : ConnectChecker {
       s.startRecord(file.absolutePath, listener = recordListener)
     } catch (e: Exception) {
       Log.e(TAG, "startRecord failed", e)
-      message("녹화 시작 실패: ${e.message}")
+      message("녹화를 시작하지 못했습니다: ${e.message}")
       return
     }
     beginSession()
@@ -397,7 +397,7 @@ object LiveSession : ConnectChecker {
         ),
       )
     }
-    if (!quiet) message(if (reason != null) "$reason · 그때까지 녹화는 저장됨" else "녹화 저장됨 · Movies/CarolLive")
+    if (!quiet) message(if (reason != null) "$reason · 그때까지의 녹화는 저장됐습니다" else "녹화를 저장했습니다 · Movies/CarolLive")
     endSessionIfIdle(null)
     changed()
   }
@@ -448,7 +448,7 @@ object LiveSession : ConnectChecker {
 
   private fun tick() {
     if (isRecording && Recordings.freeBytes() < Recordings.STOP_MIN_FREE_BYTES) {
-      stopRecording("저장공간이 1GB 아래라 녹화만 멈춤. 방송은 계속됨")
+      stopRecording("저장공간이 1GB 아래라 녹화만 멈춥니다. 방송은 계속됩니다")
     }
     val s = session
     if (s != null) {
@@ -491,15 +491,15 @@ object LiveSession : ConnectChecker {
       if (s.getStreamClient().reTry(RETRY_DELAY_MS, reason, null)) {
         if (state != State.RETRYING) session?.let { it.reconnects++ }
         state = State.RETRYING
-        message("연결 끊김, 다시 붙는 중")
+        message("연결이 끊겨 다시 연결하는 중입니다")
       } else if (s.isRecording) {
         // network is gone but the local recording is still good: keep it running
         s.stopStream()
         state = State.IDLE
-        message("방송 연결이 끊김. 녹화는 계속됨 ($reason)")
+        message("방송 연결이 끊겼습니다. 녹화는 계속됩니다 ($reason)")
       } else {
         stopAll("연결 실패: $reason")
-        message("연결 실패: $reason")
+        message("연결에 실패했습니다: $reason")
       }
       changed()
     }
@@ -517,7 +517,7 @@ object LiveSession : ConnectChecker {
   override fun onAuthError() {
     ui.post {
       stopAll("인증 실패")
-      message("인증 실패. 스트림 키를 확인해줘")
+      message("인증에 실패했습니다. 스트림 키를 확인해 주세요")
     }
   }
 

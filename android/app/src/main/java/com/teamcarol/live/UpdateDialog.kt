@@ -12,7 +12,7 @@ object UpdateDialog {
     val message = buildString {
       append("지금 v${Updates.currentVersion} → 새 버전 ${release.tag}\n\n")
       if (notes.isNotEmpty()) append(notes).append("\n\n")
-      append("받은 APK를 열어서 설치하면 됨. 설치할 때만 '보안 위험 자동 차단'을 잠깐 꺼야 함. 설정과 연결 정보는 그대로 남음.")
+      append("받은 APK를 열어서 설치하시면 됩니다. 설치할 때만 '보안 위험 자동 차단'을 잠깐 꺼야 합니다. 설정과 연결 정보는 그대로 남습니다.")
     }
     AlertDialog.Builder(activity)
       .setTitle("새 버전 ${release.tag}")
