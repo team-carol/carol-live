@@ -67,8 +67,6 @@ export interface MaimaiProfile {
   rating?: number;
   /** rating_base_<this>.png on maimai DX NET: normal, blue, …, rainbow, rainbow_kiwami */
   ratingBase?: string;
-  trophy?: string;
-  trophyRank?: string;
   /** img/Icon/<this>.png */
   icon?: string;
   /** course_rank_<n>: 1 = 初段 … 10 = 十段, 12 = 真初段 … 21 = 真十段, 22 = 真皆伝, 23 = 裏皆伝 */
@@ -78,7 +76,6 @@ export interface MaimaiProfile {
   /** file names (no .png) of the dan and class badges under img/course/ and img/class/ */
   courseImg?: string;
   classImg?: string;
-  stars?: number;
   playCount?: number;
   playCountCurrent?: number;
 }

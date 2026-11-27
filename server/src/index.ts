@@ -399,11 +399,8 @@ function cleanProfile(input: unknown): Record<string, string | number> | null {
   int("rating", 99999);
   int("course", 99);
   int("cls", 99);
-  int("stars", 9_999_999);
   int("playCount", 9_999_999);
   int("playCountCurrent", 9_999_999);
-  if (typeof p.trophy === "string") out.trophy = p.trophy.trim().slice(0, 80);
-  if (typeof p.trophyRank === "string" && /^[A-Za-z]{1,12}$/.test(p.trophyRank)) out.trophyRank = p.trophyRank;
   if (typeof p.ratingBase === "string" && /^[a-z_]{1,24}$/.test(p.ratingBase)) out.ratingBase = p.ratingBase;
   if (typeof p.courseImg === "string" && /^course_rank_[0-9A-Za-z]{1,24}$/.test(p.courseImg)) out.courseImg = p.courseImg;
   if (typeof p.classImg === "string" && /^class_rank_s_[0-9A-Za-z]{1,24}$/.test(p.classImg)) out.classImg = p.classImg;

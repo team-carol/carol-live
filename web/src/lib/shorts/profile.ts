@@ -1,7 +1,7 @@
-// The player profile card of the legacy shorts layout: icon, title, name, rating, dan, class, play count.
+// The player profile card of the legacy shorts layout: icon, name, rating, dan, class, play count.
 // Sizes, colours and vectors are taken from the mai-log Figma file (Frame 30 and its Dan / Otomo / RatingSection
 // components, which the frame uses at 1.15×). Dan and class are maimai DX NET's own badge images; the Figma
-// badges are drawn only when an image is missing. The frame's "★ × N" is left out.
+// badges are drawn only when an image is missing. The frame's title bar and "★ × N" are left out.
 import type { MaimaiProfile } from "../../api.ts";
 import { INK, SHADOW, WHITE, canvas, font, paint, plate, roundRect, shadowText, type Ctx, type Paint, type Stops } from "./draw.ts";
 import { classOf, danOf, ratingTier, type ClassTier, type RatingTier } from "./images.ts";
@@ -142,38 +142,9 @@ export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, images: { icon
   }
 
   const x = pad + side + 17.25;
-  const w = W - pad - x;
   let y = pad;
 
-  // title (trophy)
-  ctx.fillStyle = SHADOW;
-  roundRect(ctx, x, y + 3.45, w, 43.125, 9.2);
-  ctx.fill();
-  ctx.fillStyle = "#f9b993";
-  roundRect(ctx, x, y, w, 43.125, 9.2);
-  ctx.fill();
-  ctx.strokeStyle = "#e1946d";
-  ctx.lineWidth = 3.45;
-  roundRect(ctx, x + 1.725, y + 1.725, w - 3.45, 43.125 - 3.45, 7.5);
-  ctx.stroke();
-  if (profile.trophy) {
-    ctx.save();
-    roundRect(ctx, x + 3.45, y, w - 6.9, 43.125, 6);
-    ctx.clip();
-    ctx.font = font(400, 20.7);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 3;
-    ctx.strokeText(profile.trophy, x + w / 2, y + 22.5);
-    ctx.fillStyle = WHITE;
-    ctx.fillText(profile.trophy, x + w / 2, y + 22.5);
-    ctx.restore();
-  }
-
-  // name + rating
-  y = pad + 59.02;
+  // name + rating at the top, badges in the middle, play count at the bottom (the frame's title bar is left out)
   const nameW = 397.65;
   ctx.fillStyle = SHADOW;
   roundRect(ctx, x, y + 3.45, nameW, 64.4, 9.2);
@@ -201,7 +172,7 @@ export function drawProfileCard(ctx: Ctx, profile: MaimaiProfile, images: { icon
   plate(ctx, STAR_SMALL, ratingX + 150 * K + 4.6, y + 4.6, K, "#f0da83", 24, undefined, 2);
 
   // dan and class: the site's badges at the row height, else the Figma ones
-  y = pad + 139.31;
+  y = pad + (side - 64 * K) / 2;
   let cx = x;
   const badge = (img: ImageBitmap) => {
     const bw = (img.width / img.height) * 64 * K;

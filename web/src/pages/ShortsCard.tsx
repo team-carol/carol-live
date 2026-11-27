@@ -78,11 +78,11 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     }
   }, [mode, background]);
 
-  // fonts for every text on the overlay (title, name, trophy, dan) before the first draw
+  // fonts for every text on the overlay (title, name, dan) before the first draw
   useEffect(() => {
     if (profile === undefined) return;
     let alive = true;
-    const text = [play.title, profile?.name, profile?.trophy, "初二三四五六七八九十真裏皆伝段"].filter(Boolean).join("");
+    const text = [play.title, profile?.name, "初二三四五六七八九十真裏皆伝段"].filter(Boolean).join("");
     loadFonts(text).then(() => alive && setFonts(true));
     return () => {
       alive = false;
