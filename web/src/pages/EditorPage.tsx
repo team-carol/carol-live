@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card, Stat, StatGrid, Tag, TextInput } from "@team-carol/design-system/react";
+import { Button, Card, Stat, StatGrid, Tag, TextArea, TextInput } from "@team-carol/design-system/react";
 import { api, type Recording } from "../api";
 import { bytes, clock, dateTime, parseClock } from "../format";
 import { httpReader, trimMp4, type TrimProgress } from "../lib/mp4trim";
 import { decodeCounts, findSongs, matchPlays, type Song } from "../lib/songs";
+import { youtubeChapters } from "../lib/chapters";
 import { achievementText, difficultyLabel, difficultyStyle, marks, playFilePart, rankColor, rankLabel } from "../lib/maimai";
 import { link } from "../router";
 
@@ -324,6 +325,8 @@ export function EditorPage({ id }: { id: string }) {
             )}
           </Card>
 
+          {songs.length > 0 && <ChaptersCard rec={rec} songs={songs} />}
+
           <Card className="editor__panel">
             <h2 className="crl-card__title">구간 자르기</h2>
             <p className="crl-card__body">재인코딩 없이 원본 화질 그대로, 필요한 부분만 내려받아서 자름.</p>
@@ -443,6 +446,57 @@ export function EditorPage({ id }: { id: string }) {
         </Card>
       )}
     </>
+  );
+}
+
+/** YouTube description chapters, shifted by how far the recording started after the stream */
+function ChaptersCard({ rec, songs }: { rec: Recording; songs: Song[] }) {
+  const s = rec.summary;
+  // YouTube's 0:00 is about when the stream started; the recording usually starts with it
+  const initial =
+    s?.streamed && s.startedAt && rec.recorded_at ? Math.round((rec.recorded_at - s.startedAt) / 1000) : 0;
+  const [offset, setOffset] = useState(initial);
+  const [copied, setCopied] = useState(false);
+  const { text, ok } = useMemo(() => youtubeChapters(songs, { offset, lead: PAD_BEFORE }), [songs, offset]);
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Card className="chapters">
+      <h2 className="crl-card__title">유튜브 챕터</h2>
+      <TextArea
+        label="영상 설명란에 붙여넣기"
+        readOnly
+        value={text}
+        rows={Math.min(10, text.split("\n").length + 1)}
+        onFocus={(e) => e.currentTarget.select()}
+      />
+      <div className="chapters__offset">
+        <span className="crl-caption">유튜브 영상과 시간 차이</span>
+        <div className="nudges">
+          <button type="button" className="crl-chip nudge" onClick={() => setOffset((o) => o - 1)}>
+            -1초
+          </button>
+          <span className="chapters__value">{offset > 0 ? `+${offset}` : offset}초</span>
+          <button type="button" className="crl-chip nudge" onClick={() => setOffset((o) => o + 1)}>
+            +1초
+          </button>
+        </div>
+      </div>
+      <div className="panel-actions">
+        <Button variant="primary" onClick={copy}>
+          {copied ? "복사됨" : "챕터 복사"}
+        </Button>
+      </div>
+      {!ok && <p className="crl-helper crl-helper--error">유튜브는 챕터가 3개 이상이어야 인식함</p>}
+      <p className="crl-helper">
+        유튜브 스튜디오 → 콘텐츠 → 이 방송 → 설명. 곡 시작이 어긋나면 시간 차이를 맞추면 전부 같이 움직임.
+      </p>
+    </Card>
   );
 }
 

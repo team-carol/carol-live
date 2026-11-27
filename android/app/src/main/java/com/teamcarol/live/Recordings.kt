@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaScannerConnection
 import android.os.Environment
 import android.os.StatFs
+import android.provider.MediaStore
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,6 +45,20 @@ object Recordings {
   }
 
   fun gigabytes(bytes: Long): String = String.format(Locale.US, "%.1fGB", bytes / 1024.0 / 1024.0 / 1024.0)
+
+  /** removes a recording and its gallery entry; false when it is still there */
+  @Suppress("DEPRECATION") // DATA is still the way to find our own file's row
+  fun delete(context: Context, file: File): Boolean {
+    runCatching {
+      context.contentResolver.delete(
+        MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+        "${MediaStore.MediaColumns.DATA}=?",
+        arrayOf(file.absolutePath),
+      )
+    }
+    if (file.exists()) file.delete()
+    return !file.exists()
+  }
 
   /** make the finished file visible in the gallery */
   fun publish(context: Context, file: File) {

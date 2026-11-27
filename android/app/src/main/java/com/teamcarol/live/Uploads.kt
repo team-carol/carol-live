@@ -89,8 +89,15 @@ object UploadConfig {
 
   fun allowMobileData(ctx: Context): Boolean = p(ctx).getBoolean("allowMobile", false)
 
-  fun setUploadPrefs(ctx: Context, auto: Boolean, mobile: Boolean) {
-    p(ctx).edit().putBoolean("autoUpload", auto).putBoolean("allowMobile", mobile).apply()
+  /** remove the phone copy once the server has the whole file (off by default) */
+  fun deleteAfterUpload(ctx: Context): Boolean = p(ctx).getBoolean("deleteAfterUpload", false)
+
+  fun setUploadPrefs(ctx: Context, auto: Boolean, mobile: Boolean, deleteAfter: Boolean) {
+    p(ctx).edit()
+      .putBoolean("autoUpload", auto)
+      .putBoolean("allowMobile", mobile)
+      .putBoolean("deleteAfterUpload", deleteAfter)
+      .apply()
   }
 
   /** browser URL that starts pairing; the nonce must come back with the token */
@@ -437,13 +444,17 @@ class UploadWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     }
 
     val parts = JSONArray(item.parts.toSortedMap().map { (n, etag) -> JSONObject().put("partNumber", n).put("etag", etag) })
-    Api.request(paired, "POST", "/api/device/uploads/${item.recordingId}/complete", JSONObject().put("parts", parts))
+    val done = Api.request(paired, "POST", "/api/device/uploads/${item.recordingId}/complete", JSONObject().put("parts", parts))
     UploadQueue.remove(ctx, item.path)
     // best effort: a frame for the web's file grid
     runCatching { Thumbnails.jpeg(file, item.durationMs) }
       .onSuccess { jpeg -> runCatching { Api.putBytes(paired, "/api/device/recordings/${item.recordingId}/thumbnail", jpeg, "image/jpeg") } }
       .onFailure { Log.w(TAG, "thumbnail failed", it) }
-    notify("${item.name} 업로드 완료")
+    // only when the server reports the exact byte count we have
+    val stored = done.optLong("size", -1)
+    val deleted = UploadConfig.deleteAfterUpload(ctx) && stored == file.length() && Recordings.delete(ctx, file)
+    if (UploadConfig.deleteAfterUpload(ctx) && !deleted) Log.w(TAG, "kept ${item.name}: server size $stored, local ${file.length()}")
+    notify(if (deleted) "${item.name} 업로드 완료 · 폰에서 지움" else "${item.name} 업로드 완료")
   }
 
   private fun progress(name: String, sent: Long, total: Long) {

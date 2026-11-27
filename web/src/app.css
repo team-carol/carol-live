@@ -308,6 +308,42 @@
   gap: var(--crl-space-2);
 }
 
+/* YouTube chapters */
+.chapters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-4);
+}
+.chapters textarea {
+  font-family: var(--crl-font-mono, monospace);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.chapters__offset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crl-space-3);
+  flex-wrap: wrap;
+}
+.chapters__offset .crl-caption {
+  color: var(--crl-dim);
+}
+.chapters__offset .nudges {
+  align-items: center;
+}
+.chapters__offset .nudge {
+  flex: none;
+  min-width: 64px;
+}
+.chapters__value {
+  min-width: 4em;
+  text-align: center;
+  color: var(--crl-ink);
+  font-variant-numeric: tabular-nums;
+}
+
 /* start / end with touch-sized nudges */
 .mark {
   display: flex;

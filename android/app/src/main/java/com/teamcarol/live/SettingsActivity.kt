@@ -41,6 +41,7 @@ class SettingsActivity : AppCompatActivity() {
   private lateinit var upUnpair: Button
   private lateinit var upAuto: SwitchCompat
   private lateinit var upMobile: SwitchCompat
+  private lateinit var upDelete: SwitchCompat
   private lateinit var ytChannel: EditText
   private lateinit var ytTag: TextView
   private lateinit var swShowChat: SwitchCompat
@@ -78,6 +79,7 @@ class SettingsActivity : AppCompatActivity() {
     upUnpair = findViewById(R.id.up_unpair)
     upAuto = findViewById(R.id.up_auto)
     upMobile = findViewById(R.id.up_mobile)
+    upDelete = findViewById(R.id.up_delete)
     ytChannel = findViewById(R.id.yt_channel)
     ytTag = findViewById(R.id.yt_tag)
     swShowChat = findViewById(R.id.sw_show_chat)
@@ -87,8 +89,10 @@ class SettingsActivity : AppCompatActivity() {
     upDevice.setText(UploadConfig.draftDeviceName(this))
     upAuto.isChecked = UploadConfig.autoUpload(this)
     upMobile.isChecked = UploadConfig.allowMobileData(this)
+    upDelete.isChecked = UploadConfig.deleteAfterUpload(this)
     upAuto.setOnCheckedChangeListener { _, _ -> saveUploadPrefs() }
     upMobile.setOnCheckedChangeListener { _, _ -> saveUploadPrefs() }
+    upDelete.setOnCheckedChangeListener { _, _ -> saveUploadPrefs() }
     upPair.setOnClickListener { startPairing() }
     findViewById<TextView>(R.id.txt_version).text = "현재 버전 v${Updates.currentVersion}"
     findViewById<Button>(R.id.btn_check_update).setOnClickListener { button ->
@@ -159,7 +163,7 @@ class SettingsActivity : AppCompatActivity() {
   }
 
   private fun saveUploadPrefs() {
-    UploadConfig.setUploadPrefs(this, upAuto.isChecked, upMobile.isChecked)
+    UploadConfig.setUploadPrefs(this, upAuto.isChecked, upMobile.isChecked, upDelete.isChecked)
   }
 
   private fun startPairing() {

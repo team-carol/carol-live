@@ -22,7 +22,7 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 | `DeviceProbes.kt` | 후면 카메라 fps/노출 범위, USB 마이크 탐색, 배터리·발열 |
 | `Recordings.kt` | `Movies/CarolLive` 저장, 저장공간 가드 (시작 2GB / 강제 종료 1GB) |
 | `LiveSummary.kt` | 방송 결과 요약. `toWebJson()`이 서버·웹으로 감 |
-| `Uploads.kt` | 페어링 설정, 업로드 큐, WorkManager `UploadWorker` (이어 올리기), 썸네일 |
+| `Uploads.kt` | 페어링 설정, 업로드 큐, WorkManager `UploadWorker` (이어 올리기), 썸네일, 올린 뒤 폰에서 지우기(옵션, 서버 크기 = 로컬 크기일 때만) |
 | `PairActivity.kt` | `carollive://paired` 딥링크 처리, nonce 검증 |
 | `SummaryActivity.kt` / `SettingsActivity.kt` | 결과 요약 화면 / 설정 화면 |
 | `Updates.kt` / `UpdateDialog.kt` | GitHub 최신 릴리스 확인(6시간 간격), 새 버전 안내 |
@@ -38,6 +38,8 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 - `server/migrations/`: D1 스키마
 - `web/src/lib/mp4trim.ts`: moov를 Range로 읽고 필요한 샘플 바이트만 받아 새 mp4를 씀 (재인코딩 없음)
 - `web/src/lib/songs.ts`: 초당 클릭 수로 곡 구간 나누기(`findSongs`) + maimai 기록을 시간으로 맞추기(`matchPlays`). 기준값은 `web/test/fixtures/analysis-58min.json`(실제 58분 방송)과 `test/songs.test.ts`로 고정됨. 바꾸면 테스트가 통과해야 함
+- `web/src/lib/chapters.ts`: 곡 목록 → 유튜브 설명란 챕터 (0:00 시작, 3개 이상, 10초 이상 규칙)
+- `web/src/lib/maimaiLabels.ts`: 난이도·랭크·FC/AP 라벨과 게임 색(`@team-carol/design-system/game`). node 테스트에서도 불러오게 번들러 전용 import 금지
 - `web/src/lib/maimaiScrape.js`: maimai DX NET 기록 페이지에서 도는 북마클릿 본체 (순수 JS, 다른 파일 import 금지). 그 사이트 HTML에 기대고 있음
 - `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `MaimaiPage`(기록 연결 안내 + `/import`), `DevicesPage`, `LoginPage`
 - `web/src/api.ts`: 서버 타입·호출. `web/src/router.ts`: pathname 기반 간단한 라우터 (워커가 SPA fallback으로 index.html을 줌)
