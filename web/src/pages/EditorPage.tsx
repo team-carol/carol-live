@@ -243,6 +243,22 @@ export function EditorPage({ id }: { id: string }) {
             <span>{clock(now, true)}</span>
             <span>{clock(duration)}</span>
           </div>
+
+          {/* under the player, where there is room for a preview big enough to drag things on */}
+        {shortsFor !== null && songs[shortsFor]?.play && (
+          <ShortsCard
+            play={songs[shortsFor].play}
+            video={video}
+            fileUrl={api.fileUrl(rec.id)}
+            from={start}
+            to={end}
+            name={songName(songs[shortsFor], shortsFor).replace(/\.mp4$/, "_shorts.mp4")}
+            disabled={!!busy || !valid}
+            onBusy={setShortsBusy}
+            onDone={(c) => setClips((list) => [c, ...list])}
+            onClose={() => setShortsFor(null)}
+          />
+        )}
         </div>
 
         <div className="editor__side">
@@ -341,21 +357,6 @@ export function EditorPage({ id }: { id: string }) {
               </p>
             )}
           </Card>
-
-          {shortsFor !== null && songs[shortsFor]?.play && (
-            <ShortsCard
-              play={songs[shortsFor].play}
-              video={video}
-              fileUrl={api.fileUrl(rec.id)}
-              from={start}
-              to={end}
-              name={songName(songs[shortsFor], shortsFor).replace(/\.mp4$/, "_shorts.mp4")}
-              disabled={!!busy || !valid}
-              onBusy={setShortsBusy}
-              onDone={(c) => setClips((list) => [c, ...list])}
-              onClose={() => setShortsFor(null)}
-            />
-          )}
 
           {songs.length > 0 && <ChaptersCard rec={rec} songs={songs} />}
 
