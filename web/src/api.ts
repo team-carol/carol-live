@@ -119,6 +119,8 @@ export const api = {
       body: JSON.stringify(profile ? { plays, profile } : { plays }),
     }),
   maimaiProfile: () => call<{ profile: MaimaiProfile | null; updatedAt: number | null }>("/api/maimai/profile"),
+  saveMaimaiProfile: (profile: MaimaiProfile) =>
+    call<{ profile: MaimaiProfile; updatedAt: number }>("/api/maimai/profile", { method: "PUT", body: JSON.stringify(profile) }),
   me: () => call<Me>("/api/me"),
   logout: () => call<{ ok: true }>("/auth/logout", { method: "POST" }),
   recordings: () => call<{ items: Recording[]; usage: { used: number; cap: number } }>("/api/recordings"),

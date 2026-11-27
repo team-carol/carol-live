@@ -6,7 +6,9 @@ import { CARD, type CardImages } from "../lib/shorts/card";
 import { loadFonts } from "../lib/shorts/draw";
 import { CARD_MAX_Y, SHORTS, cardLayout, drawFrame, legacyLayout, loadCardImages } from "../lib/shorts/layout";
 import type { Play } from "../lib/songs";
+import { cardImageUrls } from "../lib/shorts/images";
 import { link } from "../router";
+import { ProfileEditor } from "./ProfileEditor";
 
 /** YouTube Shorts takes videos up to 3 minutes */
 const SHORTS_MAX_SECONDS = 180;
@@ -79,6 +81,9 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
   const [level, setLevel] = useState(() => readLevels()[chartKey(play)] ?? play.details?.level ?? "");
   const [guide, setGuide] = useState(false);
   const [fonts, setFonts] = useState(false);
+  /** goes up when more glyphs have loaded, so the overlay is drawn again with them */
+  const [fontTick, setFontTick] = useState(0);
+  const [editing, setEditing] = useState(false);
   const [images, setImages] = useState<CardImages>({});
   /** undefined while loading, null when the user has not imported one */
   const [profile, setProfile] = useState<MaimaiProfile | null | undefined>(undefined);
@@ -109,22 +114,29 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     if (profile === undefined) return;
     let alive = true;
     const text = [play.title, profile?.name, "初二三四五六七八九十真裏皆伝段"].filter(Boolean).join("");
-    loadFonts(text).then(() => alive && setFonts(true));
+    loadFonts(text).then(() => {
+      if (!alive) return;
+      setFonts(true);
+      setFontTick((t) => t + 1);
+    });
     return () => {
       alive = false;
     };
-  }, [play, profile]);
+  }, [play.title, profile === undefined, profile?.name]);
 
   // maimai DX NET images: the overlay is drawn with letters first and again once they arrive
+  const imageKey = profile === undefined ? null : JSON.stringify(cardImageUrls(play, profile));
   useEffect(() => {
-    if (profile === undefined) return;
+    if (imageKey === null) return;
     let alive = true;
     setImages({});
     loadCardImages(play, profile).then((loaded) => alive && setImages(loaded));
     return () => {
       alive = false;
     };
-  }, [play, profile]);
+    // only when the set of images changes, not on every typed character of the profile
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageKey]);
 
   // another song: its own remembered level, or what maimai DX NET shows
   useEffect(() => {
@@ -139,7 +151,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     return mode === "card"
       ? cardLayout(shown, images, y, { align, zoom })
       : legacyLayout(shown, profile ?? null, images, { background, songCard, align, zoom });
-  }, [fonts, mode, shown, images, y, profile, background, songCard, align, zoom]);
+  }, [fonts, fontTick, mode, shown, images, y, profile, background, songCard, align, zoom]);
 
   const paint = useCallback(() => {
     const c = preview.current;
@@ -302,11 +314,14 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
                 <button type="button" className={chip(songCard)} aria-pressed={songCard} disabled={busy} onClick={() => setSongCard((v) => !v)}>
                   곡 카드
                 </button>
+                <button type="button" className={chip(editing)} aria-pressed={editing} onClick={() => setEditing((v) => !v)}>
+                  프로필 수정
+                </button>
               </div>
-              {profile === null && (
+              {profile === null && !editing && (
                 <p className="crl-helper">
-                  프로필이 아직 없어서 프로필 카드는 빠짐. <a {...link("/maimai")}>maimai 메뉴</a>에서 북마크를 새로 등록하고 기록 페이지에서 한 번
-                  누르면 프로필 카드가 같이 나옴.
+                  프로필이 아직 없어서 프로필 카드는 빠짐. <a {...link("/maimai")}>maimai 메뉴</a>의 북마크를 새로 등록해 기록 페이지에서 한 번
+                  누르거나, "프로필 수정"으로 직접 적으면 됨.
                 </p>
               )}
             </>
@@ -351,6 +366,8 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
           </p>
         </div>
       </div>
+
+      {mode === "legacy" && editing && profile !== undefined && <ProfileEditor profile={profile} disabled={busy} onChange={setProfile} />}
 
       {length > SHORTS_MAX_SECONDS && (
         <p className="crl-helper crl-helper--error">유튜브 쇼츠는 3분까지임. 지금 구간은 {clock(length)}라 일반 영상으로 올라감.</p>

@@ -374,6 +374,21 @@
   opacity: 0.5;
   cursor: default;
 }
+.profile-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-3);
+  padding-top: var(--crl-space-3);
+  border-top: 1px solid var(--crl-border);
+}
+.profile-edit__row {
+  display: flex;
+  gap: var(--crl-space-3);
+}
+.profile-edit__row .crl-field {
+  flex: 1;
+  min-width: 0;
+}
 .shorts__bar {
   height: 6px;
   border-radius: var(--crl-radius-pill);

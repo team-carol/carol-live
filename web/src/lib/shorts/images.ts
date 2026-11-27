@@ -43,6 +43,10 @@ export function danOf(n: number | null | undefined): { label: string; jin: boole
   return null;
 }
 
+/** every dan / class with its image number, for a picker */
+export const DAN_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+export const CLASS_NUMBERS = Array.from({ length: 26 }, (_, i) => i);
+
 export type ClassTier = "B" | "A" | "S" | "SS" | "SSS" | "LEGEND";
 
 /** class_rank_s_<n>.png -> class. 0 = B5 … 4 = B1, 5 = A5 … 24 = SSS1, 25 = LEGEND (checked: 20 = SSS5) */

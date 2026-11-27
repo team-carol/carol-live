@@ -404,10 +404,25 @@ function cleanProfile(input: unknown): Record<string, string | number> | null {
   if (typeof p.ratingBase === "string" && /^[a-z_]{1,24}$/.test(p.ratingBase)) out.ratingBase = p.ratingBase;
   if (typeof p.courseImg === "string" && /^course_rank_[0-9A-Za-z]{1,24}$/.test(p.courseImg)) out.courseImg = p.courseImg;
   if (typeof p.classImg === "string" && /^class_rank_s_[0-9A-Za-z]{1,24}$/.test(p.classImg)) out.classImg = p.classImg;
-  const icon = typeof p.icon === "string" ? /img\/Icon\/([0-9a-f]{8,32})\.png/.exec(p.icon)?.[1] : undefined;
+  // the bookmarklet sends the image address, the profile form sends back the stored name
+  const icon = typeof p.icon === "string" ? (/img\/Icon\/([0-9a-f]{8,32})\.png/.exec(p.icon)?.[1] ?? /^[0-9a-f]{8,32}$/.exec(p.icon)?.[0]) : undefined;
   if (icon) out.icon = icon;
   return out;
 }
+
+/** the profile typed or corrected by hand on the web (the next bookmarklet import replaces it again) */
+app.put("/api/maimai/profile", requireUser, async (c) => {
+  const profile = cleanProfile(await c.req.json().catch(() => null));
+  if (!profile) return c.json({ error: "닉네임은 꼭 있어야 함" }, 400);
+  const t = now();
+  await c.env.DB.prepare(
+    `INSERT INTO maimai_profiles (user_id, data, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT (user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+  )
+    .bind(c.get("user").id, JSON.stringify(profile), t)
+    .run();
+  return c.json({ profile, updatedAt: t });
+});
 
 app.get("/api/maimai/profile", requireUser, async (c) => {
   const row = await c.env.DB.prepare("SELECT data, updated_at FROM maimai_profiles WHERE user_id = ?")

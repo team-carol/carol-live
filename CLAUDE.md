@@ -46,7 +46,7 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
   - `render.ts`: mediabunny로 디코드 → 오버레이 얹기 → H.264 인코드, 오디오는 복사. 편집 화면에서 필요할 때만 불러옴
 - `web/src/lib/maimaiLabels.ts`: 난이도·랭크·FC/AP 라벨과 게임 색(`@team-carol/design-system/game`). node 테스트에서도 불러오게 번들러 전용 import 금지
 - `web/src/lib/maimaiScrape.js`: maimai DX NET 기록 페이지에서 도는 북마클릿 본체 (순수 JS, 다른 파일 import 금지). 그 사이트 HTML에 기대고 있음. `scrapeMaimaiRecord`(플레이 기록) + `scrapeMaimaiProfile`(플레이어 데이터 페이지의 프로필). 고치면 사용자가 북마크를 다시 등록해야 반영됨
-- `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `ShortsCard`(쇼츠 미리보기·카드 위치·인코딩), `MaimaiPage`(기록 연결 안내 + `/import`), `DevicesPage`, `LoginPage`
+- `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `ShortsCard`(쇼츠 미리보기·레이아웃·인코딩), `ProfileEditor`(프로필 직접 수정), `MaimaiPage`(기록 연결 안내 + `/import`), `DevicesPage`, `LoginPage`
 - `web/src/api.ts`: 서버 타입·호출. `web/src/router.ts`: pathname 기반 간단한 라우터 (워커가 SPA fallback으로 index.html을 줌)
 
 ## 명령어
@@ -87,7 +87,7 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 - `LiveSummary.toWebJson()` 키와 `web/src/api.ts`의 `LiveSummary` 타입은 같이 바꿈
 - `GameActivity.toAnalysisJson()`(`clicksPerSecond`: 1초 1바이트 base64)와 `api.ts`의 `RecordingAnalysis`도 같이 바꿈. 곡 나누는 규칙은 웹에만 둠 (앱 릴리스 없이 고칠 수 있게)
 - 쇼츠 카드의 모양(`shorts/card.ts`)은 Figma mai-log 카드가 기준. 카드 색은 영상에 얹는 그림이라 `--crl-*` 토큰이 아니라 `card.ts` 상수에 둠 (난이도 색은 디자인 시스템 game 토큰)
-- 프로필은 `maimai_profiles` 테이블(사용자당 하나, JSON). `POST /api/plays`가 `profile`을 같이 받아 검사한 뒤 저장하고 `GET /api/maimai/profile`로 읽음. 모양은 `api.ts`의 `MaimaiProfile`
+- 프로필은 `maimai_profiles` 테이블(사용자당 하나, JSON). `POST /api/plays`가 `profile`을 같이 받아 검사한 뒤 저장하고 `GET /api/maimai/profile`로 읽음. 손으로 고친 값은 `PUT /api/maimai/profile`(같은 검사). 모양은 `api.ts`의 `MaimaiProfile`
 - maimai 기록은 `plays` 테이블(사용자별, `(played_at, track, title)`로 중복 없음). 녹화 상세 API가 녹화 시간 앞 5분~뒤 10분의 기록을 같이 내려줌
 - 업로드 조각 크기는 서버(`PART_SIZE`)가 정해서 내려줌. 앱은 받은 `partSize`를 씀. `/api/device/*` 응답 모양을 바꾸면 `Uploads.kt`도 같이 고침
 - 이미 배포된 앱이 있으니 기기 API는 하위 호환을 유지함 (필드 추가는 OK, 이름 변경·삭제는 피함)
