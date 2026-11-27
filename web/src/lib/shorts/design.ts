@@ -180,3 +180,83 @@ export function frameGeometry(panels: boolean, cards: CardBox[]): Geometry {
     scrimFrom: top !== null ? y : upperEnd !== null ? upperMid : 0,
   };
 }
+
+// ---- snapping while a piece is dragged ----
+
+/** the result keeps this far from the sides of the frame */
+export const SIDE_MARGIN = 44;
+
+/** a line across the frame that the dragged piece is lined up with */
+export interface Guide {
+  axis: "x" | "y";
+  at: number;
+}
+
+export interface SnapOptions {
+  /** how close (frame pixels) a line pulls the piece in */
+  threshold: number;
+  /** false for pieces that only move up and down */
+  x?: boolean;
+  /** more lines to stick to, besides the frame's centre and margins and the other pieces */
+  extraX?: number[];
+  extraY?: number[];
+}
+
+const lines = (start: number, size: number) => [start, start + size / 2, start + size];
+
+/**
+ * Where a dragged [box] goes: its edges and centre stick to the centre of the frame, the side margins and the
+ * edges and centres of the [others]. Returns the top-left corner and the lines it now sits on.
+ */
+export function snapBox(box: Rect, others: Rect[], o: SnapOptions): { x: number; y: number; guides: Guide[] } {
+  const pull = (own: number[], targets: number[]) => {
+    let best = 0;
+    let found = false;
+    for (const t of targets)
+      for (const l of own) {
+        const d = t - l;
+        if (Math.abs(d) < o.threshold && (!found || Math.abs(d) < Math.abs(best))) {
+          best = d;
+          found = true;
+        }
+      }
+    return best;
+  };
+  const tx = o.x === false ? [] : [SHORTS.width / 2, SIDE_MARGIN, SHORTS.width - SIDE_MARGIN, ...others.flatMap((r) => lines(r.x, r.w)), ...(o.extraX ?? [])];
+  const ty = [SHORTS.height / 2, ...others.flatMap((r) => lines(r.y, r.h)), ...(o.extraY ?? [])];
+  const x = box.x + pull(lines(box.x, box.w), tx);
+  const y = box.y + pull(lines(box.y, box.h), ty);
+  const on = (own: number[], targets: number[], axis: "x" | "y"): Guide[] =>
+    [...new Set(targets)].filter((t) => own.some((l) => Math.abs(l - t) < 0.5)).map((at) => ({ axis, at }));
+  return { x, y, guides: [...on(lines(x, box.w), tx, "x"), ...on(lines(y, box.h), ty, "y")] };
+}
+
+// ---- designs saved under a name ----
+
+export interface SavedDesign {
+  name: string;
+  design: ShortsDesign;
+}
+export const SAVED_MAX = 20;
+export const SAVED_NAME_MAX = 24;
+
+/** saved designs read back from storage: odd entries are dropped, designs cleaned, names kept unique */
+export function cleanSaved(input: unknown): SavedDesign[] {
+  if (!Array.isArray(input)) return [];
+  const out: SavedDesign[] = [];
+  for (const v of input) {
+    const name = typeof obj(v).name === "string" ? (obj(v).name as string).trim().slice(0, SAVED_NAME_MAX) : "";
+    if (!name || out.some((s) => s.name === name)) continue;
+    out.push({ name, design: cleanDesign(obj(v).design) });
+  }
+  return out.slice(-SAVED_MAX);
+}
+
+/** [design] saved as [name]: replaces one of the same name, else goes last (the oldest go when there are too many) */
+export function withSaved(list: SavedDesign[], name: string, design: ShortsDesign): SavedDesign[] {
+  const n = name.trim().slice(0, SAVED_NAME_MAX);
+  if (!n) return list;
+  const at = list.findIndex((s) => s.name === n);
+  const next = at >= 0 ? list.map((s, i) => (i === at ? { name: n, design } : s)) : [...list, { name: n, design }];
+  return next.slice(-SAVED_MAX);
+}

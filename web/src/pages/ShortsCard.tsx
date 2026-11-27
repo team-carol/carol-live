@@ -4,7 +4,25 @@ import { Button, Card, Select, TextInput } from "@team-carol/design-system/react
 import { api, type MaimaiProfile } from "../api";
 import { clock } from "../format";
 import type { CardImages } from "../lib/shorts/card";
-import { DEFAULT_DESIGN, PRESETS, SCALE, SHORTS, applyPreset, cleanDesign, type ElementId, type PresetId, type ShortsDesign } from "../lib/shorts/design";
+import {
+  DEFAULT_DESIGN,
+  PRESETS,
+  PROFILE_Y,
+  SAVED_NAME_MAX,
+  SCALE,
+  SHORTS,
+  SONG_Y,
+  applyPreset,
+  cleanDesign,
+  cleanSaved,
+  snapBox,
+  withSaved,
+  type ElementId,
+  type Guide,
+  type PresetId,
+  type SavedDesign,
+  type ShortsDesign,
+} from "../lib/shorts/design";
 import { loadFonts } from "../lib/shorts/draw";
 import { cardImageUrls } from "../lib/shorts/images";
 import { buildLayout, drawFrame, loadCardImages, maxY, type Box } from "../lib/shorts/layout";
@@ -22,8 +40,17 @@ const UI_ZONES = [
 ];
 /** the design is remembered on this browser, so the next song starts from the same look */
 const PREFS_KEY = "carol.shorts";
-/** a dragged piece sticks to its automatic place within this many frame pixels */
+/** designs saved under a name, on this browser */
+const SAVED_KEY = "carol.shortsSaved";
+/** a piece moved with a slider sticks to its automatic place within this many frame pixels */
 const SNAP = 16;
+/** a dragged piece sticks to the lines of the frame and of the other pieces within this many frame pixels */
+const SNAP_GUIDE = 14;
+/** lines a dragged card sticks to besides the other pieces: its places in the Figma frame, and the top of the Shorts app's own UI */
+const CARD_LINES: Record<"song" | "profile", number[]> = { song: [SONG_Y.alone, SONG_Y.legacy, 1520], profile: [PROFILE_Y, 1520] };
+/** changes closer together than this (a drag, a slider being pulled) are undone as one step */
+const HISTORY_GAP = 400;
+const HISTORY_MAX = 100;
 /** easier to hit small lettering with a finger */
 const HIT_PAD = 18;
 
@@ -71,6 +98,14 @@ function readDesign(): ShortsDesign {
   }
 }
 
+function readSaved(): SavedDesign[] {
+  try {
+    return cleanSaved(JSON.parse(localStorage.getItem(SAVED_KEY) ?? "[]"));
+  } catch {
+    return [];
+  }
+}
+
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 interface Props {
@@ -82,14 +117,66 @@ interface Props {
   to: number;
   name: string;
   disabled: boolean;
+  /** plays the range in the editor's player (from where it is, when that is inside the range) and stops at its end */
+  onPlayRange: () => void;
   onBusy: (busy: boolean) => void;
   onDone: (clip: { name: string; url: string; size: number; duration: number }) => void;
   onClose: () => void;
 }
 
-export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onBusy, onDone, onClose }: Props) {
+export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onPlayRange, onBusy, onDone, onClose }: Props) {
   const preview = useRef<HTMLCanvasElement>(null);
-  const [design, setDesign] = useState<ShortsDesign>(readDesign);
+
+  // The design with its undo history. Every change goes through setDesign; changes in quick succession, or
+  // within one drag on the preview ([held]), make one step.
+  const [design, setDesignState] = useState<ShortsDesign>(readDesign);
+  const current = useRef(design);
+  const history = useRef({ past: [] as ShortsDesign[], future: [] as ShortsDesign[], at: 0, held: false, fresh: false });
+  const setDesign = useCallback((next: ShortsDesign | ((d: ShortsDesign) => ShortsDesign)) => {
+    const before = current.current;
+    const after = typeof next === "function" ? next(before) : next;
+    if (JSON.stringify(after) === JSON.stringify(before)) return;
+    const h = history.current;
+    const now = performance.now();
+    if (h.fresh || (!h.held && now - h.at > HISTORY_GAP)) {
+      h.past.push(before);
+      if (h.past.length > HISTORY_MAX) h.past.shift();
+    }
+    h.fresh = false;
+    h.at = now;
+    h.future = [];
+    current.current = after;
+    setDesignState(after);
+  }, []);
+  /** undo (-1) or redo (+1) */
+  const travel = useCallback((dir: -1 | 1) => {
+    const h = history.current;
+    const next = (dir < 0 ? h.past : h.future).pop();
+    if (!next) return;
+    (dir < 0 ? h.future : h.past).push(current.current);
+    h.at = 0;
+    current.current = next;
+    setDesignState(next);
+  }, []);
+  const canUndo = history.current.past.length > 0;
+  const canRedo = history.current.future.length > 0;
+
+  const [saved, setSaved] = useState<SavedDesign[]>(readSaved);
+  /** the name being typed for a design about to be saved */
+  const [naming, setNaming] = useState<string | null>(null);
+  /** the saved design last loaded or saved, which can be overwritten or deleted */
+  const [loaded, setLoaded] = useState<string | null>(null);
+  const storeSaved = (list: SavedDesign[]) => {
+    setSaved(list);
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+    } catch {
+      // only a convenience
+    }
+  };
+  /** lines the piece being dragged is lined up with */
+  const [guides, setGuides] = useState<Guide[]>([]);
+  const [playing, setPlaying] = useState(false);
   /** the piece being edited, as in a video editor: picked on the preview or in the layer list */
   const [part, setPart] = useState<Part>("song");
   const [hover, setHover] = useState<ElementId | null>(null);
@@ -195,6 +282,18 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
       ctx.strokeRect(b.x - HANDLE.out, b.y - HANDLE.out, b.w + HANDLE.out * 2, b.h + HANDLE.out * 2);
       ctx.restore();
     };
+    if (guides.length) {
+      ctx.save();
+      ctx.strokeStyle = color.focus;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (const g of guides) {
+        ctx.moveTo(g.axis === "x" ? g.at : 0, g.axis === "x" ? 0 : g.at);
+        ctx.lineTo(g.axis === "x" ? g.at : SHORTS.width, g.axis === "x" ? SHORTS.height : g.at);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
     const over = layout.boxes.find((b) => b.id === hover && b.id !== part);
     if (over) frame(over, 3, 0.7);
     const picked = layout.boxes.find((b) => b.id === part);
@@ -211,7 +310,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
         ctx.stroke();
       }
     }
-  }, [video, layout, guide, part, hover, busy]);
+  }, [video, layout, guide, guides, part, hover, busy]);
 
   useEffect(() => {
     paint();
@@ -230,8 +329,62 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     };
   }, [paint, video]);
 
-  /** moves a piece's anchor to [x, y] (frame pixels), kept inside the frame */
-  const moveTo = (id: ElementId, x: number, y: number, box?: Box) => {
+  // While the player plays, the preview follows it frame by frame (the events above come only a few times a second)
+  const paintNow = useRef(paint);
+  paintNow.current = paint;
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    const perFrame = "requestVideoFrameCallback" in v;
+    let handle = 0;
+    const cancel = () => (perFrame ? v.cancelVideoFrameCallback(handle) : cancelAnimationFrame(handle));
+    const loop = () => {
+      if (v.paused || v.ended) return;
+      paintNow.current();
+      handle = perFrame ? v.requestVideoFrameCallback(loop) : requestAnimationFrame(loop);
+    };
+    const start = () => {
+      setPlaying(true);
+      cancel();
+      loop();
+    };
+    const stop = () => {
+      setPlaying(false);
+      cancel();
+    };
+    v.addEventListener("play", start);
+    v.addEventListener("pause", stop);
+    v.addEventListener("ended", stop);
+    if (!v.paused) start();
+    return () => {
+      cancel();
+      v.removeEventListener("play", start);
+      v.removeEventListener("pause", stop);
+      v.removeEventListener("ended", stop);
+    };
+  }, [video]);
+
+  // Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y) anywhere on the page, except while typing in a text field
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || (key !== "z" && key !== "y") || busy) return;
+      const t = e.target;
+      const typing =
+        t instanceof HTMLTextAreaElement || (t instanceof HTMLInputElement && !["range", "checkbox"].includes(t.type)) || (t instanceof HTMLElement && t.isContentEditable);
+      if (typing) return;
+      e.preventDefault();
+      travel(key === "y" || e.shiftKey ? 1 : -1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [travel, busy]);
+
+  /**
+   * Moves a piece's anchor to [x, y] (frame pixels), kept inside the frame. With [stick] it jumps to its
+   * automatic place when it comes close; either way, landing exactly there makes it follow the cards again.
+   */
+  const moveTo = (id: ElementId, x: number, y: number, box?: Box, stick = false) => {
     setDesign((d) => {
       if (id === "song") return { ...d, song: { ...d.song, y: Math.round(clamp(y, 0, maxY("song", d))) } };
       if (id === "profile") return { ...d, profile: { ...d.profile, y: Math.round(clamp(y, 0, maxY("profile", d))) } };
@@ -243,8 +396,8 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
         y: Math.round(clamp(y, 0, SHORTS.height - h)),
       };
       const auto = box?.auto;
-      if (auto && Math.abs(pos.x - auto.x) < SNAP) pos.x = auto.x;
-      if (auto && Math.abs(pos.y - auto.y) < SNAP) pos.y = auto.y;
+      if (stick && auto && Math.abs(pos.x - auto.x) < SNAP) pos.x = auto.x;
+      if (stick && auto && Math.abs(pos.y - auto.y) < SNAP) pos.y = auto.y;
       const back = !!auto && pos.x === auto.x && pos.y === auto.y;
       return { ...d, [id]: { ...d[id], pos: back ? null : pos } };
     });
@@ -284,6 +437,9 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     const g = grabAt(p);
     setPart(g.kind === "footage" ? "frame" : g.id);
     drag.current = { ...g, ...p, moved: false };
+    // the whole drag is one step to undo
+    history.current.held = true;
+    history.current.fresh = true;
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -303,10 +459,34 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     // pulling the footage down shows more of its top
     if (g.kind === "footage") setDesign((d) => ({ ...d, footage: { ...d.footage, align: clamp(g.align - dy / 800, 0, 1) } }));
     else if (g.kind === "scale") scaleTo(g.id, (g.scale * Math.hypot(p.x - g.box.anchor.x, p.y - g.box.anchor.y)) / g.reach);
-    else moveTo(g.id, g.box.anchor.x + dx, g.box.anchor.y + dy, g.box);
+    else {
+      const raw = { x: g.box.anchor.x + dx, y: g.box.anchor.y + dy };
+      // Alt moves freely; otherwise the piece sticks to the frame's lines and the other pieces, and the lines show
+      if (e.altKey) {
+        setGuides([]);
+        moveTo(g.id, raw.x, raw.y, g.box);
+        return;
+      }
+      const card = !isSized(g.id);
+      // the anchor of the marks is their right edge
+      const inset = g.id === "marks" ? g.box.w : 0;
+      // a result that follows the cards moves with a dragged card, so it is nothing to line that card up with
+      const others = (layout?.boxes ?? []).filter((b) => b.id !== g.id && !(card && isSized(b.id) && !design[b.id].pos));
+      const s = snapBox({ x: raw.x - inset, y: raw.y, w: g.box.w, h: g.box.h }, others, {
+        threshold: SNAP_GUIDE,
+        x: !card,
+        extraY: card ? CARD_LINES[g.id as "song" | "profile"] : g.box.auto ? [g.box.auto.y] : undefined,
+      });
+      setGuides(s.guides);
+      moveTo(g.id, s.x + inset, s.y, g.box);
+    }
   };
   const onPointerUp = () => {
     drag.current = null;
+    history.current.held = false;
+    history.current.fresh = false;
+    history.current.at = 0;
+    setGuides([]);
   };
   // arrow keys nudge the picked piece (Shift: bigger steps)
   const onKeyDown = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
@@ -314,6 +494,8 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     const box = part === "frame" ? undefined : boxOf(part);
     if (!step || busy || !box) return;
     e.preventDefault();
+    // not also the page's "seek one second"
+    e.stopPropagation();
     const by = e.shiftKey ? 20 : 2;
     moveTo(box.id, box.anchor.x + step[0] * by, box.anchor.y + step[1] * by, { ...box, auto: undefined });
   };
@@ -400,8 +582,8 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
       <>
         {slider(`${id}-scale`, `크기 ${percent(s.scale)}`, Math.round(s.scale * 100), SCALE.min * 100, SCALE.max * 100, (v) => scaleTo(id, v / 100), 5)}
         {/* with a mouse the piece is dragged on the preview; sliders are for fingers */}
-        {box && slider(`${id}-x`, "가로 위치", Math.round(box.anchor.x), 0, SHORTS.width, (v) => moveTo(id, v, box.anchor.y, box), 2, "shorts__touch")}
-        {box && slider(`${id}-y`, "세로 위치", Math.round(box.anchor.y), 0, SHORTS.height, (v) => moveTo(id, box.anchor.x, v, box), 2, "shorts__touch")}
+        {box && slider(`${id}-x`, "가로 위치", Math.round(box.anchor.x), 0, SHORTS.width, (v) => moveTo(id, v, box.anchor.y, box, true), 2, "shorts__touch")}
+        {box && slider(`${id}-y`, "세로 위치", Math.round(box.anchor.y), 0, SHORTS.height, (v) => moveTo(id, box.anchor.x, v, box, true), 2, "shorts__touch")}
         {s.pos && (
           <button type="button" className="crl-chip nudge shorts__reset" disabled={busy} onClick={() => set(id, { pos: null })}>
             자동 위치로 되돌리기
@@ -554,28 +736,112 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
             onKeyDown={onKeyDown}
             aria-label="쇼츠 미리보기. 요소를 눌러 고르고 끌어서 옮김"
           />
-          <p className="crl-helper shorts__hint">눌러서 고르고 끌어서 옮김 · 모서리 점을 끌면 크기 · 방향키로 조금씩 · 빈 곳을 끌면 영상</p>
+          <div className="shorts__tools">
+            <button type="button" className="crl-chip nudge" disabled={busy} onClick={() => (playing ? video.current?.pause() : onPlayRange())}>
+              {playing ? "정지" : "재생"}
+            </button>
+            <button type="button" className="crl-chip nudge" disabled={busy || !canUndo} title="Ctrl+Z" onClick={() => travel(-1)}>
+              실행 취소
+            </button>
+            <button type="button" className="crl-chip nudge" disabled={busy || !canRedo} title="Ctrl+Shift+Z" onClick={() => travel(1)}>
+              다시 실행
+            </button>
+          </div>
+          <p className="crl-helper shorts__hint">
+            눌러서 고르고 끌어서 옮김 (선에 붙음, Alt를 누르면 자유롭게) · 모서리 점을 끌면 크기 · 방향키로 조금씩 · 빈 곳을 끌면 영상 · Ctrl+Z 실행 취소
+          </p>
         </div>
 
         <div className="shorts__controls">
           <Select
-            label="구성 불러오기"
+            label="구성"
             value=""
             disabled={busy}
             onChange={(e) => {
               const id = e.target.value;
-              if (id === "reset") setDesign(DEFAULT_DESIGN);
+              const mine = id.startsWith("saved:") ? saved.find((x) => x.name === id.slice(6)) : undefined;
+              if (id === "save") setNaming(loaded ?? "");
+              else if (id === "reset") setDesign(DEFAULT_DESIGN);
+              // a saved design brings its pieces and looks; how the footage sits belongs to this video
+              else if (mine) setDesign((d) => ({ ...mine.design, footage: d.footage }));
               else if (id) setDesign((d) => applyPreset(d, id as PresetId));
+              if (id !== "save") {
+                setLoaded(mine ? mine.name : null);
+                setNaming(null);
+              }
             }}
           >
-            <option value="">고르기…</option>
-            {PRESETS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-            <option value="reset">처음 상태로</option>
+            <option value="">불러오기 / 저장…</option>
+            <optgroup label="기본">
+              {PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+              <option value="reset">처음 상태로</option>
+            </optgroup>
+            {saved.length > 0 && (
+              <optgroup label="내 구성">
+                {saved.map((x) => (
+                  <option key={x.name} value={`saved:${x.name}`}>
+                    {x.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <option value="save">지금 구성을 저장…</option>
           </Select>
+          {naming !== null ? (
+            <form
+              className="shorts__save"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const n = naming.trim();
+                if (!n) return;
+                storeSaved(withSaved(saved, n, design));
+                setLoaded(n.slice(0, SAVED_NAME_MAX));
+                setNaming(null);
+              }}
+            >
+              <TextInput
+                label="구성 이름"
+                value={naming}
+                maxLength={SAVED_NAME_MAX}
+                autoFocus
+                placeholder="예: 세로 영상"
+                helperText={saved.some((x) => x.name === naming.trim()) ? "같은 이름이 있어서 덮어씀" : undefined}
+                onChange={(e) => setNaming(e.target.value)}
+              />
+              <div className="nudges">
+                <button type="submit" className="crl-chip nudge is-on" disabled={!naming.trim()}>
+                  저장
+                </button>
+                <button type="button" className="crl-chip nudge" onClick={() => setNaming(null)}>
+                  취소
+                </button>
+              </div>
+            </form>
+          ) : (
+            loaded && (
+              <p className="crl-helper shorts__loaded">
+                내 구성 "{loaded}"
+                <button type="button" className="shorts__link" disabled={busy} onClick={() => storeSaved(withSaved(saved, loaded, design))}>
+                  지금 상태로 덮어쓰기
+                </button>
+                <button
+                  type="button"
+                  className="shorts__link"
+                  disabled={busy}
+                  onClick={() => {
+                    storeSaved(saved.filter((x) => x.name !== loaded));
+                    setLoaded(null);
+                  }}
+                >
+                  삭제
+                </button>
+              </p>
+            )
+          )}
 
           <ul className="layers" aria-label="화면 요소">
             {layers.map((l) => (

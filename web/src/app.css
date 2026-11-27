@@ -359,8 +359,46 @@
   outline: 2px solid var(--crl-focus);
   outline-offset: 2px;
 }
+/* under the preview: play the range, undo, redo */
+.shorts__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--crl-space-2);
+  margin-top: var(--crl-space-3);
+}
+.shorts__tools .nudge {
+  flex: 1 1 auto;
+  padding-inline: var(--crl-space-3);
+  white-space: nowrap;
+}
 .shorts__hint {
   margin-top: var(--crl-space-3);
+}
+/* naming a design to save; what can be done with the saved design that is loaded */
+.shorts__save {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-3);
+}
+.shorts__loaded {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--crl-space-2) var(--crl-space-4);
+}
+.shorts__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--crl-accent-soft);
+  font: inherit;
+  cursor: pointer;
+}
+.shorts__link:hover {
+  text-decoration: underline;
+}
+.shorts__link:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .shorts__controls {
   flex: 1;

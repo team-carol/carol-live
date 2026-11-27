@@ -40,14 +40,14 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 - `web/src/lib/songs.ts`: 초당 클릭 수로 곡 구간 나누기(`findSongs`) + maimai 기록을 시간으로 맞추기(`matchPlays`). 기준값은 `web/test/fixtures/analysis-58min.json`(실제 58분 방송)과 `test/songs.test.ts`로 고정됨. 바꾸면 테스트가 통과해야 함
 - `web/src/lib/chapters.ts`: 곡 목록 → 유튜브 설명란 챕터 (0:00 시작, 3개 이상, 10초 이상 규칙)
 - `web/src/lib/shorts/`: 곡 구간 → 쇼츠 mp4. 수치·색·벡터는 전부 Figma mai-log 파일에서 옴
-  - `design.ts`: 에디터가 바꾸는 설정(`ShortsDesign`: 요소별 표시·모양·위치·크기, 파란 배경, 그라데이션 세기, 영상 높이·확대), 프리셋, 저장값 정리(`cleanDesign`), 카드 위치 → 배경 판·영상 창 계산(`frameGeometry`). 순수 함수, node 테스트
+  - `design.ts`: 에디터가 바꾸는 설정(`ShortsDesign`: 요소별 표시·모양·위치·크기, 파란 배경, 그라데이션 세기, 영상 높이·확대), 프리셋, 저장값 정리(`cleanDesign`), 카드 위치 → 배경 판·영상 창 계산(`frameGeometry`), 끌 때 맞춤선(`snapBox`), 이름 붙여 저장한 구성(`cleanSaved`/`withSaved`). 순수 함수, node 테스트
   - `layout.ts`: 설정 → 오버레이(`buildLayout`)와 `drawFrame`. 미리보기와 인코더가 같은 함수로 그림. 요소별 상자(`boxes`)를 같이 돌려줘서 에디터가 고르고 끌 때 씀
   - `card.ts`(곡 카드: 간단 = 자켓·난이도·ST/DX·곡명·레벨 / 원본 = Figma 카드 그대로 성적 줄 포함), `stats.ts`(영상 위 달성률과 랭크·마크: 넷 이미지 또는 글자, 글자 뒤 그라데이션), `profile.ts`(프로필 카드: 레이팅 틀은 Figma, 단·클래스는 maimai DX NET 이미지이고 못 받거나 배지를 고르면 Figma 배지), `draw.ts`(공통 캔버스 도구)
   - `images.ts`: maimai DX NET 이미지 경로와 번호 → 단/클래스/레이팅 색 (순수 함수, node 테스트)
   - `render.ts`: mediabunny로 디코드 → 오버레이 얹기 → H.264 인코드, 오디오는 복사. 편집 화면에서 필요할 때만 불러옴
 - `web/src/lib/maimaiLabels.ts`: 난이도·랭크·FC/AP 라벨과 게임 색(`@team-carol/design-system/game`). node 테스트에서도 불러오게 번들러 전용 import 금지
 - `web/src/lib/maimaiScrape.js`: maimai DX NET 기록 페이지에서 도는 북마클릿 본체 (순수 JS, 다른 파일 import 금지). 그 사이트 HTML에 기대고 있음. `scrapeMaimaiRecord`(플레이 기록) + `scrapeMaimaiProfile`(플레이어 데이터 페이지의 프로필). 고치면 사용자가 북마크를 다시 등록해야 반영됨
-- `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `ShortsCard`(쇼츠 에디터: 미리보기에서 요소 고르기·끌기, 요소 목록, 고른 요소 설정, 인코딩. 구성은 localStorage `carol.shorts`), `ProfileEditor`(프로필 직접 수정), `MaimaiPage`(기록 연결 안내 + `/import`), `DevicesPage`, `LoginPage`
+- `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `ShortsCard`(쇼츠 에디터: 미리보기에서 요소 고르기·끌기, 요소 목록, 고른 요소 설정, 인코딩. 실행 취소 기록은 `setDesign` 하나를 거침. 구성은 localStorage `carol.shorts`, 저장한 구성은 `carol.shortsSaved`), `ProfileEditor`(프로필 직접 수정), `MaimaiPage`(기록 연결 안내 + `/import`), `DevicesPage`, `LoginPage`
 - `web/src/api.ts`: 서버 타입·호출. `web/src/router.ts`: pathname 기반 간단한 라우터 (워커가 SPA fallback으로 index.html을 줌)
 
 ## 명령어

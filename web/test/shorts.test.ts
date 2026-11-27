@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_DESIGN, applyPreset, cleanDesign, frameGeometry, type CardBox, type ShortsDesign } from "../src/lib/shorts/design.ts";
+import { DEFAULT_DESIGN, applyPreset, cleanDesign, cleanSaved, frameGeometry, snapBox, withSaved, type CardBox, type ShortsDesign } from "../src/lib/shorts/design.ts";
 import { cardImageUrls, classOf, coverRect, danOf, ratingTier } from "../src/lib/shorts/images.ts";
 import type { Play } from "../src/lib/songs.ts";
 
@@ -154,4 +154,48 @@ test("a stored design is cleaned: odd values fall back, the first version's sett
   assert.ok(!old.panels && !old.song.show && old.profile.show);
   assert.ok(cleanDesign({ mode: "legacy" }).panels);
   assert.deepEqual(cleanDesign({ mode: "card" }), applyPreset(DEFAULT_DESIGN, "card"));
+});
+
+test("a dragged piece sticks to the frame's centre, the margins and the other pieces, and says which lines", () => {
+  const other = { x: 636, y: 300, w: 400, h: 200 };
+  // 10 px left of the margin and 9 px above the other piece's top: pulled onto both
+  const a = snapBox({ x: 34, y: 291, w: 420, h: 56 }, [other], { threshold: 14 });
+  assert.equal(a.x, 44);
+  assert.equal(a.y, 300);
+  assert.deepEqual(a.guides, [
+    { axis: "x", at: 44 },
+    { axis: "y", at: 300 },
+  ]);
+  // centres: the box's middle onto the middle of the frame, its middle line onto the other's
+  const b = snapBox({ x: 335, y: 366, w: 420, h: 56 }, [other], { threshold: 14 });
+  assert.equal(b.x + 210, 540);
+  assert.equal(b.y + 28, 400);
+  // nothing near: left where it is, no lines
+  const c = snapBox({ x: 200, y: 700, w: 300, h: 56 }, [other], { threshold: 14 });
+  assert.deepEqual(c, { x: 200, y: 700, guides: [] });
+  // cards only move up and down; extra lines (their Figma places) count
+  const d = snapBox({ x: 16, y: 104, w: 1048, h: 185.2 }, [], { threshold: 14, x: false, extraY: [110] });
+  assert.deepEqual(d, { x: 16, y: 110, guides: [{ axis: "y", at: 110 }] });
+  // the nearest line wins
+  assert.equal(snapBox({ x: 100, y: 293, w: 100, h: 10 }, [other], { threshold: 14, extraY: [296] }).y, 295);
+});
+
+test("designs are saved under a name: same name replaces, storage is cleaned", () => {
+  const a = withSaved([], "  세로 영상  ", DEFAULT_DESIGN);
+  assert.deepEqual(a.map((s) => s.name), ["세로 영상"]);
+  const moved = { ...DEFAULT_DESIGN, scrim: 0.9 };
+  const b = withSaved(withSaved(a, "레거시", applyPreset(DEFAULT_DESIGN, "legacy")), "세로 영상", moved);
+  assert.deepEqual(b.map((s) => s.name), ["세로 영상", "레거시"]);
+  assert.equal(b[0].design.scrim, 0.9);
+  assert.equal(withSaved(b, "   ", moved), b);
+  let many = b;
+  for (let i = 0; i < 30; i++) many = withSaved(many, `구성 ${i}`, moved);
+  assert.equal(many.length, 20);
+  assert.equal(many[19].name, "구성 29");
+  // from storage
+  assert.deepEqual(cleanSaved("x"), []);
+  const read = cleanSaved([{ name: "a", design: { scrim: 5 } }, { name: "a", design: {} }, { name: 3 }, null, { name: "b" }]);
+  assert.deepEqual(read.map((s) => s.name), ["a", "b"]);
+  assert.equal(read[0].design.scrim, 1);
+  assert.deepEqual(read[1].design, DEFAULT_DESIGN);
 });

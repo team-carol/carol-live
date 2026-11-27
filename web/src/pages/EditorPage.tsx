@@ -125,8 +125,11 @@ export function EditorPage({ id }: { id: string }) {
     }
   };
 
-  const preview = () => {
-    seek(start, true);
+  /** plays the range and stops at its end; with [resume], from where the player is when that is inside the range */
+  const preview = (resume = false) => {
+    const v = video.current;
+    if (resume && v && v.currentTime >= start && v.currentTime < end - 0.3) void v.play();
+    else seek(start, true);
     previewUntil.current = end;
   };
 
@@ -254,6 +257,7 @@ export function EditorPage({ id }: { id: string }) {
             to={end}
             name={songName(songs[shortsFor], shortsFor).replace(/\.mp4$/, "_shorts.mp4")}
             disabled={!!busy || !valid}
+            onPlayRange={() => preview(true)}
             onBusy={setShortsBusy}
             onDone={(c) => setClips((list) => [c, ...list])}
             onClose={() => setShortsFor(null)}
@@ -420,7 +424,7 @@ export function EditorPage({ id }: { id: string }) {
             <p className="crl-caption clip-len">클립 길이 {clock(Math.max(0, end - start), true)}</p>
 
             <div className="panel-actions">
-              <Button variant="secondary" onClick={preview} disabled={!valid}>
+              <Button variant="secondary" onClick={() => preview()} disabled={!valid}>
                 구간 미리보기
               </Button>
               <Button variant="primary" onClick={cut} disabled={!valid || !!busy || shortsBusy}>

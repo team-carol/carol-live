@@ -3,7 +3,7 @@
 // (pastel rainbow for SSS and AP, green FC, as in the mai-log shorts).
 import { achievementText, markOf, rankLabel } from "../maimaiLabels.ts";
 import type { Play } from "../songs.ts";
-import type { MarkStyle } from "./design.ts";
+import { SIDE_MARGIN, type MarkStyle } from "./design.ts";
 import { CAP, font, outlined, type Ctx, type Paint, type Stops } from "./draw.ts";
 
 const SSS: Stops = [
@@ -31,7 +31,7 @@ export const markLook = (label: string) => MARK[label.replace("+", "")] ?? MARK.
  * Sizes at scale 1. The site's images are flat (rank 200×89, marks 108×56), so they are drawn taller than
  * the lettering's capitals (78 px type = 56 px capitals) to carry the same weight.
  */
-export const STATS = { margin: 44, size: 78, gap: 20, stroke: 6, drop: 6, rankImage: 104, markImage: 88, imageGap: 10 };
+export const STATS = { margin: SIDE_MARGIN, size: 78, gap: 20, stroke: 6, drop: 6, rankImage: 104, markImage: 88, imageGap: 10 };
 
 export type MarkKey = "rank" | "fc" | "sync";
 export type MarkImages = Partial<Record<MarkKey, ImageBitmap>>;
