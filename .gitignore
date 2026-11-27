@@ -20,3 +20,6 @@ node_modules
 
 # local audio samples for tuning tools/click-limiter.mjs
 /_audio/
+
+# log of tools/fake-google.cjs
+tools/fake-google.calls.jsonl

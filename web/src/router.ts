@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 
-/** tiny pathname router: "/", "/recent", "/folder/:device", "/r/:id", "/devices", "/maimai", "/import" */
+/** tiny pathname router: "/", "/recent", "/folder/:device", "/r/:id", "/devices", "/maimai", "/import", "/youtube" */
 export type Route =
   | { name: "recordings"; view: "all" | "recent" }
   | { name: "folder"; device: string }
   | { name: "editor"; id: string }
   | { name: "devices" }
   | { name: "maimai" }
-  | { name: "import" };
+  | { name: "import" }
+  | { name: "youtube" };
 
 function parse(path: string): Route {
   const editor = /^\/r\/([^/]+)$/.exec(path);
@@ -17,6 +18,7 @@ function parse(path: string): Route {
   if (path === "/devices") return { name: "devices" };
   if (path === "/maimai") return { name: "maimai" };
   if (path === "/import") return { name: "import" };
+  if (path === "/youtube") return { name: "youtube" };
   if (path === "/recent") return { name: "recordings", view: "recent" };
   return { name: "recordings", view: "all" };
 }

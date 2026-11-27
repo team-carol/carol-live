@@ -7,6 +7,7 @@ import { DrivePage } from "./pages/DrivePage";
 import { EditorPage } from "./pages/EditorPage";
 import { DevicesPage } from "./pages/DevicesPage";
 import { ImportPage, MaimaiPage, PENDING_IMPORT_KEY } from "./pages/MaimaiPage";
+import { YoutubePage } from "./pages/YoutubePage";
 
 function storage<T>(fn: () => T): T | null {
   try {
@@ -62,6 +63,9 @@ export function App() {
         <TopBarLink {...link("/maimai")} active={route.name === "maimai" || route.name === "import"}>
           maimai
         </TopBarLink>
+        <TopBarLink {...link("/youtube")} active={route.name === "youtube"}>
+          유튜브
+        </TopBarLink>
         <TopBarLink {...link("/devices")} active={route.name === "devices"}>
           기기
         </TopBarLink>
@@ -79,6 +83,7 @@ export function App() {
         {route.name === "devices" && <DevicesPage />}
         {route.name === "maimai" && <MaimaiPage />}
         {route.name === "import" && <ImportPage />}
+        {route.name === "youtube" && <YoutubePage />}
       </main>
       <Footer>
         <span className="crl-caption">carol live · team carol</span>

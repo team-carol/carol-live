@@ -91,6 +91,14 @@ object YouTubeChat {
   private var findTries = 0
   private var lastMessageAt = 0L
 
+  /** chat id and title of the broadcast the app made itself ([YouTubeAccount]): nothing to search for then */
+  private var known: Pair<String, String?>? = null
+
+  /** [LiveSession] calls this when it starts pushing to an account broadcast, and with null when that ends */
+  fun attach(chatId: String?, title: String?) {
+    known = if (chatId.isNullOrEmpty()) null else chatId to title
+  }
+
   /**
    * Called by the live screen on every render: lines polling up with the stream and the screen.
    * Cheap when nothing changes.
@@ -102,7 +110,7 @@ object YouTubeChat {
     }
     val p = UploadConfig.paired(ctx)
     val blocked = when {
-      !settings.showChat || settings.youtubeChannel.isBlank() -> Status.OFF
+      !settings.showChat || (settings.youtubeChannel.isBlank() && known == null) -> Status.OFF
       p == null -> Status.NEED_PAIRING
       else -> null
     }
@@ -120,11 +128,20 @@ object YouTubeChat {
     if (running || status in TERMINAL) return
     when (status) {
       Status.OFF, Status.NEED_PAIRING -> {
-        set(Status.SEARCHING, null)
+        if (!useKnown()) set(Status.SEARCHING, null)
         schedule(FIRST_FIND_DELAY_MS)
       }
       else -> schedule(0)
     }
+  }
+
+  /** @return true when the chat of the app's own broadcast is now the one being read */
+  private fun useKnown(): Boolean {
+    val k = known ?: return false
+    liveChatId = k.first
+    pageToken = null
+    set(Status.LIVE, k.second)
+    return true
   }
 
   /** tap on the panel header after giving up */
@@ -133,7 +150,7 @@ object YouTubeChat {
     findTries = 0
     liveChatId = null
     pageToken = null
-    set(Status.SEARCHING, null)
+    if (!useKnown()) set(Status.SEARCHING, null)
     schedule(0)
   }
 
@@ -235,6 +252,12 @@ object YouTubeChat {
     liveChatId = null
     pageToken = null
     findTries = 0
+    if (channel.isEmpty()) {
+      // the app's own broadcast is over and there is no channel to look for another one on
+      stop()
+      set(Status.GAVE_UP, "방송이 끝났습니다")
+      return
+    }
     set(Status.ENDED, null)
     schedule(30_000)
   }

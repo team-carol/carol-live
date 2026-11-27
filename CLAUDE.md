@@ -29,12 +29,15 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 | `GameActivity.kt` | 마이크 원음에서 초당 버튼 클릭 수를 셈 → 녹화별로 잘라 업로드 때 `analysis`로 보냄. `MicEffects`가 감지기 → 리미터 순서로 묶음 |
 | `ClickLimiter.kt` | 버튼 소리 줄이기 (끔/약/강). `tools/click-limiter.mjs`가 1:1 포트 |
 | `SongSpotter.kt` | 실험: 방송 중 위쪽 모니터의 곡명을 몇 초마다 읽음(ML Kit 일본어 모델, 폰 안에서만). 곡 목록(앱에 든 `assets/song_titles.txt` + 하루 한 번 받는 `maimai.team-carol.com/api/aliases`의 원제목)과 대조해 두 번 연속 같으면 확정. 안 되는 이유는 화면 정보 줄에 그대로 보여 줌. 화면은 `LiveSession.grabFrame`으로만 받고, 방송에 얹는 것도 `LiveSession.setSongOverlay`로만 함. 기본 꺼짐 |
-| `YouTubeChat.kt` | 방송 화면 유튜브 채팅. 서버 `/api/device/youtube/*`로 라이브 찾기·채팅 폴링. 화면이 보일 때만 돎 |
+| `YouTubeChat.kt` | 방송 화면 유튜브 채팅. 서버 `/api/device/youtube/*`로 라이브 찾기·채팅 폴링. 화면이 보일 때만 돎. 앱이 만든 방송이면 `attach`로 받은 채팅 ID를 바로 씀(찾기 생략) |
+| `YouTubeAccount.kt` | 유튜브 계정 방식(`StreamMode.ACCOUNT`): 서버의 `/api/device/youtube/account`·`/broadcasts`·`/broadcasts/:id/end` 호출, 폼의 마지막 값, 방송 끝내기 작업(`EndBroadcastWorker`, 네트워크가 있을 때 재시도) |
+| `GoLiveActivity.kt` | 방송 시작 전 폼(프리셋·제목·설명·공개 범위). 방송을 만들어 `MainActivity`에 넘기기만 하고 카메라·인코더는 만지지 않음 |
 
 ### server/src, web/src
 
 - `server/src/index.ts`: 모든 라우트. `/auth/*` (디스코드 OAuth, 기기 페어링), `/api/*` (웹, 세션 쿠키), `/api/device/*` (앱, 기기 토큰)
 - `server/src/youtube.ts`: YouTube Data API v3 프록시 (채널 핸들 → 라이브 영상 → liveChatId, 채팅 메시지 정리)
+- `server/src/google.ts`: 구글 OAuth(웹 방식)와 사용자 채널 쪽 YouTube 호출 (refresh token 암호화, 재사용 스트림, 방송 만들기·bind·끝내기, 썸네일). 라우트는 `index.ts`의 `/auth/youtube*`, `/api/youtube*`(웹), `/api/device/youtube/account|broadcasts`(앱)
 - `server/src/pages.ts`: 페어링 완료/에러 HTML (carol.css 사용)
 - `server/migrations/`: D1 스키마
 - `web/src/lib/mp4trim.ts`: moov를 Range로 읽고 필요한 샘플 바이트만 받아 새 mp4를 씀 (재인코딩 없음)
@@ -48,7 +51,7 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
   - `render.ts`: mediabunny로 디코드 → 오버레이 얹기 → H.264 인코드, 오디오는 복사. 편집 화면에서 필요할 때만 불러옴
 - `web/src/lib/maimaiLabels.ts`: 난이도·랭크·FC/AP 라벨과 게임 색(`@team-carol/design-system/game`). node 테스트에서도 불러오게 번들러 전용 import 금지
 - `web/src/lib/maimaiScrape.js`: maimai DX NET 기록 페이지에서 도는 북마클릿 본체 (순수 JS, 다른 파일 import 금지). 그 사이트 HTML에 기대고 있음. `scrapeMaimaiRecord`(플레이 기록) + `scrapeMaimaiProfile`(플레이어 데이터 페이지의 프로필). 고치면 사용자가 북마크를 다시 등록해야 반영됨
-- `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `ShortsCard`(쇼츠 에디터: 미리보기에서 요소 고르기·끌기, 요소 목록, 고른 요소 설정, 인코딩. 실행 취소 기록은 `setDesign` 하나를 거침. 구성은 localStorage `carol.shorts`, 저장한 구성은 `carol.shortsSaved`), `ProfileEditor`(프로필 직접 수정), `MaimaiPage`(기록 연결 안내 + `/import`), `DevicesPage`, `LoginPage`
+- `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `ShortsCard`(쇼츠 에디터: 미리보기에서 요소 고르기·끌기, 요소 목록, 고른 요소 설정, 인코딩. 실행 취소 기록은 `setDesign` 하나를 거침. 구성은 localStorage `carol.shorts`, 저장한 구성은 `carol.shortsSaved`), `ProfileEditor`(프로필 직접 수정), `MaimaiPage`(기록 연결 안내 + `/import`), `YoutubePage`(채널 연결 + 방송 프리셋, 썸네일은 `lib/thumbnail.ts`로 2MB 안에 맞춤), `DevicesPage`, `LoginPage`
 - `web/src/api.ts`: 서버 타입·호출. `web/src/router.ts`: pathname 기반 간단한 라우터 (워커가 SPA fallback으로 index.html을 줌)
 
 ## 명령어
@@ -92,6 +95,9 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 - 쇼츠 카드의 모양(`shorts/card.ts`)은 Figma mai-log 카드가 기준. 카드 색은 영상에 얹는 그림이라 `--crl-*` 토큰이 아니라 `card.ts` 상수에 둠 (난이도 색은 디자인 시스템 game 토큰)
 - 프로필은 `maimai_profiles` 테이블(사용자당 하나, JSON). `POST /api/plays`가 `profile`을 같이 받아 검사한 뒤 저장하고 `GET /api/maimai/profile`로 읽음. 손으로 고친 값은 `PUT /api/maimai/profile`(같은 검사). 모양은 `api.ts`의 `MaimaiProfile`
 - maimai 기록은 `plays` 테이블(사용자별, `(played_at, track, title)`로 중복 없음). 녹화 상세 API가 녹화 시간 앞 5분~뒤 10분의 기록을 같이 내려줌
+- 유튜브 계정 방송: 앱은 `POST /api/device/youtube/broadcasts`(`{title, description?, privacy?, presetId?}`)의 응답 `{id, rtmpUrl, rtmpsUrl, key, liveChatId, watchUrl, thumbnail}`로 송출함. `YouTubeAccount.kt`와 같이 바꿈. 오류는 `{error: 코드, message: 한국어 문장}`이고 앱·웹은 `message`를 그대로 보여 줌
+- 방송은 `enableAutoStop: false`로 만듦(재연결해도 같은 방송). 그래서 끝내기는 앱(`LiveSession.streamEnded` → `EndBroadcastWorker`)과 서버(다음 방송을 만들 때 `youtube_broadcasts`에 남은 것 정리)가 책임짐. 둘 중 하나를 빼면 방송이 채널에 계속 떠 있게 됨
+- 프리셋의 `{date}`는 앱이 바꿈(`YouTubeAccount.fillDate`). 웹 안내 문구(`YoutubePage`)와 같이 바꿈
 - 업로드 조각 크기는 서버(`PART_SIZE`)가 정해서 내려줌. 앱은 받은 `partSize`를 씀. `/api/device/*` 응답 모양을 바꾸면 `Uploads.kt`도 같이 고침
 - 이미 배포된 앱이 있으니 기기 API는 하위 호환을 유지함 (필드 추가는 OK, 이름 변경·삭제는 피함)
 - D1 스키마 변경은 `server/migrations/000N_*.sql` 새 파일로. 이미 있는 마이그레이션은 고치지 않음
@@ -102,14 +108,17 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 - `android/keystore.properties`, `*.jks`, `server/.dev.vars`는 절대 커밋하지 않음 (`.gitignore`에 있음)
 - `DEV_LOGIN=1`은 로컬 전용. `wrangler.jsonc` vars나 운영 secret에 넣지 않음
 - 운영 주소는 `https://live.team-carol.com` 하나 (`workers_dev: false`). OAuth redirect와 페어링 주소가 요청 origin에서 만들어지기 때문
-- `DISCORD_CLIENT_SECRET`, `ALLOWED_DISCORD_IDS`(팀원 디스코드 ID), `YOUTUBE_API_KEY`는 `wrangler secret`으로만 넣음. 공개 레포라 `wrangler.jsonc`에 쓰지 않음. 유튜브 키를 앱에 넣지 않음
+- `DISCORD_CLIENT_SECRET`, `ALLOWED_DISCORD_IDS`(팀원 디스코드 ID), `YOUTUBE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`은 `wrangler secret`으로만 넣음. 공개 레포라 `wrangler.jsonc`에 쓰지 않음. 유튜브 키를 앱에 넣지 않음
 
 ### 유튜브 할당량
 
 - YouTube Data API는 하루 10,000 단위를 팀 전체가 같이 씀. 채팅 폴링 1번 = 5 단위, `search.list`는 하루 100번 제한
 - 그래서 채팅은 방송 중 + 앱 화면이 보일 때만 불러오고, 조용하면 12초 간격으로 늦춤. 폴링 간격을 줄이거나 화면 꺼진 상태에서 불러오게 바꾸지 않음
 - 라이브 찾기는 업로드 목록(2 단위)을 먼저 보고, `search.list`는 세 번에 한 번(`deep=1`)만 씀
-- 유튜브 스트림 키는 폰 앱 설정에만 저장됨. 코드·로그·이슈에 남기지 않음
+- 계정 방송은 만들고 끝내는 데 5 단위쯤(liveStreams·liveBroadcasts 호출은 1 단위씩), `thumbnails.set`은 50 단위. 프리셋 목록·채널 확인은 D1만 읽고 할당량을 쓰지 않게 둠
+- 유튜브 스트림 키는 폰 앱 설정에만 저장됨. 코드·로그·이슈에 남기지 않음. 유튜브 계정 방식의 키는 서버가 방송을 만들 때 읽어 응답으로만 넘기고(D1·로그에 남기지 않음), 앱은 `LiveSession.Broadcast`로 메모리에만 둠
+- 구글 refresh token은 D1 `youtube_links`에 AES-GCM으로 암호화해 둠(열쇠는 `GOOGLE_CLIENT_SECRET`에서 만듦). 어떤 API 응답에도 넣지 않음. 범위는 `youtube.force-ssl` 하나이고 넓히지 않음
+- `GOOGLE_OAUTH_BASE`, `YOUTUBE_API_BASE`, `YOUTUBE_UPLOAD_BASE`는 로컬에서 `tools/fake-google.cjs`로 돌려 볼 때만 씀. 운영에 넣지 않음
 - 기기 토큰은 서버에 sha256 해시로만 저장. 페어링은 앱이 만든 nonce가 돌아와야만 받아들임
 - 웹 API는 항상 로그인한 사용자 본인의 녹화만 돌려줌 (`user_id` 조건 빠뜨리지 않기). maimai 기록(`plays`)도 마찬가지
 - maimai DX NET 로그인 정보는 다루지 않음. 북마클릿은 사용자가 보고 있는 기록 페이지의 DOM과, 같은 사이트의 플레이어 데이터 페이지(프로필)만 읽고, 데이터는 URL fragment로 `/import`에 넘김. 읽는 범위를 넓히면 `MaimaiPage`의 안내 문구도 같이 고침

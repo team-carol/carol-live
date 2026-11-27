@@ -2,8 +2,27 @@ import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { pairedPage, errorPage } from "./pages";
 import { YtError, chatPage, errorStatus, findLive, type YtEnv } from "./youtube";
+import {
+  GoogleError,
+  accessToken,
+  configured as googleConfigured,
+  consentUrl,
+  createBroadcast,
+  endBroadcast,
+  exchangeCode,
+  googleErrorMessage,
+  googleErrorStatus,
+  openToken,
+  ownChannel,
+  reusableStream,
+  revoke,
+  sealToken,
+  setThumbnail,
+  type GoogleEnv,
+  type Privacy,
+} from "./google";
 
-export interface Env extends YtEnv {
+export interface Env extends YtEnv, GoogleEnv {
   DB: D1Database;
   BUCKET: R2Bucket;
   ASSETS: Fetcher;
@@ -35,6 +54,7 @@ type Ctx = Context<App>;
 const SESSION_COOKIE = "cl_session";
 const STATE_COOKIE = "cl_oauth_state";
 const PAIR_COOKIE = "cl_pair";
+const YT_STATE_COOKIE = "cl_yt_state";
 const SESSION_DAYS = 30;
 /** R2 parts must all be the same size (except the last); 50 MB stays under the Workers body limit */
 const PART_SIZE = 50 * 1024 * 1024;
@@ -261,6 +281,46 @@ app.get("/auth/device", async (c) => {
     maxAge: 600,
   });
   return c.redirect(c.env.DEV_LOGIN === "1" ? "/auth/dev" : "/auth/login");
+});
+
+// ---- linking a YouTube channel (Google OAuth). Started from the web's YouTube page by a logged-in user.
+
+app.get("/auth/youtube", async (c) => {
+  if (!(await sessionUser(c))) return c.redirect("/");
+  if (!googleConfigured(c.env)) return c.html(errorPage(googleErrorMessage(new GoogleError("not_configured"))), 503);
+  const state = randomToken(16);
+  setCookie(c, YT_STATE_COOKIE, state, { httpOnly: true, secure: secure(c), sameSite: "Lax", path: "/auth", maxAge: 600 });
+  return c.redirect(consentUrl(c.env, new URL("/auth/youtube/callback", c.req.url).toString(), state));
+});
+
+app.get("/auth/youtube/callback", async (c) => {
+  const user = await sessionUser(c);
+  if (!user) return c.html(errorPage("로그인이 풀렸습니다. 다시 로그인한 뒤 연결해 주세요"), 401);
+  const saved = getCookie(c, YT_STATE_COOKIE);
+  deleteCookie(c, YT_STATE_COOKIE, { path: "/auth" });
+  // the person pressed "cancel" on Google's page
+  if (c.req.query("error")) return c.redirect("/youtube?link=denied");
+  const state = c.req.query("state");
+  const code = c.req.query("code");
+  if (!code || !state || state !== saved) return c.html(errorPage("연결 요청이 만료됐습니다. 다시 시도해 주세요"), 400);
+  try {
+    const tokens = await exchangeCode(c.env, code, new URL("/auth/youtube/callback", c.req.url).toString());
+    const channel = await ownChannel(c.env, tokens.accessToken);
+    // a stream remembered for another channel is of no use to this one
+    await c.env.DB.prepare(
+      `INSERT INTO youtube_links (user_id, channel_id, channel_title, refresh_token, stream_id, linked_at) VALUES (?, ?, ?, ?, NULL, ?)
+       ON CONFLICT(user_id) DO UPDATE SET
+         stream_id = CASE WHEN youtube_links.channel_id = excluded.channel_id THEN youtube_links.stream_id ELSE NULL END,
+         channel_id = excluded.channel_id, channel_title = excluded.channel_title,
+         refresh_token = excluded.refresh_token, linked_at = excluded.linked_at`,
+    )
+      .bind(user.id, channel.id, channel.title, await sealToken(c.env, tokens.refreshToken), now())
+      .run();
+    return c.redirect("/youtube?link=ok");
+  } catch (e) {
+    if (!(e instanceof GoogleError)) console.error("youtube link", e);
+    return c.html(errorPage(e instanceof GoogleError ? googleErrorMessage(e) : "유튜브 연결에 실패했습니다"), 502);
+  }
 });
 
 app.post("/auth/logout", async (c) => {
@@ -727,6 +787,278 @@ app.get("/api/device/youtube/chat", requireDevice, async (c) => {
     return c.json(await chatPage(c.env, liveChatId, c.req.query("pageToken") || undefined));
   } catch (e) {
     return ytFail(c, e);
+  }
+});
+
+// ------------------------------------------------------------------ youtube account: presets (web) and broadcasts (app)
+
+const PRIVACY = new Set<Privacy>(["public", "unlisted", "private"]);
+const PRESET_MAX = 20;
+const THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024;
+const THUMBNAIL_TYPES = new Set(["image/jpeg", "image/png"]);
+
+interface LinkRow {
+  channel_id: string;
+  channel_title: string;
+  refresh_token: string;
+  stream_id: string | null;
+}
+
+interface PresetRow {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  privacy: Privacy;
+  thumbnail_key: string | null;
+  thumbnail_type: string | null;
+  updated_at: number;
+}
+
+function googleFail(c: Ctx, e: unknown) {
+  if (e instanceof GoogleError) return c.json({ error: e.code, message: googleErrorMessage(e) }, googleErrorStatus(e.code));
+  console.error("google", e);
+  return c.json({ error: "upstream", message: googleErrorMessage(new GoogleError("upstream")) }, 502);
+}
+
+const thumbnailKey = (userId: string, presetId: string) => `youtube-thumbs/${keyPart(userId)}/${presetId}`;
+
+/** the refresh token and the R2 key stay here */
+const presetOut = (p: PresetRow) => ({
+  id: p.id,
+  name: p.name,
+  title: p.title,
+  description: p.description,
+  privacy: p.privacy,
+  hasThumbnail: !!p.thumbnail_key,
+  updatedAt: p.updated_at,
+});
+
+async function youtubeAccount(env: Env, userId: string) {
+  const link = await env.DB.prepare("SELECT channel_id, channel_title FROM youtube_links WHERE user_id = ?").bind(userId).first<LinkRow>();
+  const presets = await env.DB.prepare(
+    "SELECT id, name, title, description, privacy, thumbnail_key, thumbnail_type, updated_at FROM youtube_presets WHERE user_id = ? ORDER BY position, updated_at",
+  )
+    .bind(userId)
+    .all<PresetRow>();
+  return {
+    configured: googleConfigured(env),
+    channel: link ? { id: link.channel_id, title: link.channel_title } : null,
+    presets: presets.results.map(presetOut),
+  };
+}
+
+/** title and description as YouTube takes them: 1–100 and up to 5000 characters, no angle brackets */
+function cleanBroadcastText(input: { title?: unknown; description?: unknown; privacy?: unknown }) {
+  const title = typeof input.title === "string" ? input.title.trim() : "";
+  const description = typeof input.description === "string" ? input.description.trim() : "";
+  if (!title) return "제목을 적어 주세요";
+  if ([...title].length > 100) return "제목은 100자까지입니다";
+  if ([...description].length > 5000) return "설명은 5000자까지입니다";
+  if (/[<>]/.test(title) || /[<>]/.test(description)) return "제목과 설명에는 < 와 > 를 쓸 수 없습니다";
+  const privacy = PRIVACY.has(input.privacy as Privacy) ? (input.privacy as Privacy) : "unlisted";
+  return { title, description, privacy };
+}
+
+function cleanPreset(input: { name?: unknown; title?: unknown; description?: unknown; privacy?: unknown }) {
+  const name = typeof input.name === "string" ? input.name.trim().slice(0, 30) : "";
+  if (!name) return "프리셋 이름을 적어 주세요";
+  const text = cleanBroadcastText(input);
+  return typeof text === "string" ? text : { name, ...text };
+}
+
+async function ownPreset(c: Ctx, userId: string) {
+  return c.env.DB.prepare(
+    "SELECT id, name, title, description, privacy, thumbnail_key, thumbnail_type, updated_at FROM youtube_presets WHERE id = ? AND user_id = ?",
+  )
+    .bind(c.req.param("id"), userId)
+    .first<PresetRow>();
+}
+
+app.get("/api/youtube", requireUser, async (c) => c.json(await youtubeAccount(c.env, c.get("user").id)));
+
+/** unlink: forget the token here and ask Google to forget the grant */
+app.delete("/api/youtube/link", requireUser, async (c) => {
+  const user = c.get("user");
+  const link = await c.env.DB.prepare("SELECT refresh_token FROM youtube_links WHERE user_id = ?").bind(user.id).first<LinkRow>();
+  if (link) {
+    await c.env.DB.prepare("DELETE FROM youtube_links WHERE user_id = ?").bind(user.id).run();
+    try {
+      await revoke(c.env, await openToken(c.env, link.refresh_token));
+    } catch {
+      // already unusable
+    }
+  }
+  return c.json({ ok: true });
+});
+
+app.post("/api/youtube/presets", requireUser, async (c) => {
+  const user = c.get("user");
+  const p = cleanPreset(await c.req.json().catch(() => ({})));
+  if (typeof p === "string") return c.json({ error: p }, 400);
+  const count = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM youtube_presets WHERE user_id = ?").bind(user.id).first<{ n: number }>();
+  if ((count?.n ?? 0) >= PRESET_MAX) return c.json({ error: `프리셋은 ${PRESET_MAX}개까지 만들 수 있습니다` }, 400);
+  const presetId = id();
+  await c.env.DB.prepare(
+    "INSERT INTO youtube_presets (id, user_id, name, title, description, privacy, position, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  )
+    .bind(presetId, user.id, p.name, p.title, p.description, p.privacy, count?.n ?? 0, now())
+    .run();
+  return c.json({ id: presetId });
+});
+
+app.put("/api/youtube/presets/:id", requireUser, async (c) => {
+  const user = c.get("user");
+  const p = cleanPreset(await c.req.json().catch(() => ({})));
+  if (typeof p === "string") return c.json({ error: p }, 400);
+  const res = await c.env.DB.prepare(
+    "UPDATE youtube_presets SET name = ?, title = ?, description = ?, privacy = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+  )
+    .bind(p.name, p.title, p.description, p.privacy, now(), c.req.param("id"), user.id)
+    .run();
+  return res.meta.changes ? c.json({ ok: true }) : c.json({ error: "not found" }, 404);
+});
+
+app.delete("/api/youtube/presets/:id", requireUser, async (c) => {
+  const user = c.get("user");
+  const preset = await ownPreset(c, user.id);
+  if (!preset) return c.json({ error: "not found" }, 404);
+  if (preset.thumbnail_key) await c.env.BUCKET.delete(preset.thumbnail_key);
+  await c.env.DB.prepare("DELETE FROM youtube_presets WHERE id = ? AND user_id = ?").bind(preset.id, user.id).run();
+  return c.json({ ok: true });
+});
+
+app.put("/api/youtube/presets/:id/thumbnail", requireUser, async (c) => {
+  const user = c.get("user");
+  const preset = await ownPreset(c, user.id);
+  if (!preset) return c.json({ error: "not found" }, 404);
+  const type = (c.req.header("Content-Type") ?? "").split(";")[0].trim().toLowerCase();
+  if (!THUMBNAIL_TYPES.has(type)) return c.json({ error: "썸네일은 JPG나 PNG만 올릴 수 있습니다" }, 400);
+  const body = await c.req.arrayBuffer();
+  if (!body.byteLength) return c.json({ error: "빈 파일입니다" }, 400);
+  if (body.byteLength > THUMBNAIL_MAX_BYTES) return c.json({ error: "썸네일은 2MB까지입니다 (유튜브 제한)" }, 400);
+  const key = thumbnailKey(user.id, preset.id);
+  await c.env.BUCKET.put(key, body, { httpMetadata: { contentType: type } });
+  await c.env.DB.prepare("UPDATE youtube_presets SET thumbnail_key = ?, thumbnail_type = ?, updated_at = ? WHERE id = ? AND user_id = ?")
+    .bind(key, type, now(), preset.id, user.id)
+    .run();
+  return c.json({ ok: true });
+});
+
+app.delete("/api/youtube/presets/:id/thumbnail", requireUser, async (c) => {
+  const user = c.get("user");
+  const preset = await ownPreset(c, user.id);
+  if (!preset) return c.json({ error: "not found" }, 404);
+  if (preset.thumbnail_key) await c.env.BUCKET.delete(preset.thumbnail_key);
+  await c.env.DB.prepare("UPDATE youtube_presets SET thumbnail_key = NULL, thumbnail_type = NULL, updated_at = ? WHERE id = ? AND user_id = ?")
+    .bind(now(), preset.id, user.id)
+    .run();
+  return c.json({ ok: true });
+});
+
+app.get("/api/youtube/presets/:id/thumbnail", requireUser, async (c) => {
+  const preset = await ownPreset(c, c.get("user").id);
+  const object = preset?.thumbnail_key ? await c.env.BUCKET.get(preset.thumbnail_key) : null;
+  if (!object) return c.json({ error: "not found" }, 404);
+  return new Response(object.body, {
+    headers: { "Content-Type": preset?.thumbnail_type ?? "image/jpeg", "Cache-Control": "private, no-cache" },
+  });
+});
+
+/** what the app shows before going live: the linked channel and the presets to start from */
+app.get("/api/device/youtube/account", requireDevice, async (c) => c.json(await youtubeAccount(c.env, c.get("device").user_id)));
+
+/**
+ * { title, description?, privacy?, presetId? } -> a new broadcast on the linked channel, and where to push the stream.
+ * The stream key in the answer is the app's to use for this session; it is not stored here and must not be logged.
+ */
+app.post("/api/device/youtube/broadcasts", requireDevice, async (c) => {
+  const device = c.get("device");
+  const input = await c.req.json<{ title?: unknown; description?: unknown; privacy?: unknown; presetId?: unknown }>().catch(() => ({}) as never);
+  const text = cleanBroadcastText(input);
+  if (typeof text === "string") return c.json({ error: "invalid", message: text }, 400);
+  try {
+    const link = await c.env.DB.prepare("SELECT channel_id, channel_title, refresh_token, stream_id FROM youtube_links WHERE user_id = ?")
+      .bind(device.user_id)
+      .first<LinkRow>();
+    if (!link) throw new GoogleError(googleConfigured(c.env) ? "not_linked" : "not_configured");
+    const access = await accessToken(c.env, await openToken(c.env, link.refresh_token));
+    const ingest = await reusableStream(c.env, access, link.stream_id);
+    if (ingest.streamId !== link.stream_id) {
+      await c.env.DB.prepare("UPDATE youtube_links SET stream_id = ? WHERE user_id = ?").bind(ingest.streamId, device.user_id).run();
+    }
+    // A broadcast the app could not end (killed, or offline when it stopped) would stay live on the channel,
+    // because broadcasts do not end by themselves when the stream stops. End what is left before the new one.
+    const left = await c.env.DB.prepare("SELECT id FROM youtube_broadcasts WHERE user_id = ? AND ended_at IS NULL ORDER BY created_at DESC LIMIT 3")
+      .bind(device.user_id)
+      .all<{ id: string }>();
+    for (const row of left.results) {
+      try {
+        await endBroadcast(c.env, access, row.id);
+      } catch {
+        // gone or not endable; it is not asked about again
+      }
+      await c.env.DB.prepare("UPDATE youtube_broadcasts SET ended_at = ? WHERE id = ?").bind(now(), row.id).run();
+    }
+    const broadcast = await createBroadcast(c.env, access, text, ingest.streamId);
+    await c.env.DB.prepare("INSERT INTO youtube_broadcasts (id, user_id, device_id, title, created_at) VALUES (?, ?, ?, ?, ?)")
+      .bind(broadcast.id, device.user_id, device.id, text.title, now())
+      .run();
+
+    // the thumbnail of the preset it started from; the broadcast is still good when this fails
+    let thumbnail: "none" | "set" | "failed" = "none";
+    let thumbnailMessage: string | undefined;
+    const preset =
+      typeof input.presetId === "string"
+        ? await c.env.DB.prepare("SELECT thumbnail_key, thumbnail_type FROM youtube_presets WHERE id = ? AND user_id = ?")
+            .bind(input.presetId, device.user_id)
+            .first<PresetRow>()
+        : null;
+    if (preset?.thumbnail_key) {
+      try {
+        const object = await c.env.BUCKET.get(preset.thumbnail_key);
+        if (!object) throw new GoogleError("invalid", "썸네일 파일이 없습니다");
+        await setThumbnail(c.env, access, broadcast.id, await object.arrayBuffer(), preset.thumbnail_type ?? "image/jpeg");
+        thumbnail = "set";
+      } catch (e) {
+        thumbnail = "failed";
+        thumbnailMessage = e instanceof GoogleError ? googleErrorMessage(e) : "썸네일을 올리지 못했습니다";
+      }
+    }
+    return c.json({
+      id: broadcast.id,
+      channel: link.channel_title,
+      watchUrl: `https://www.youtube.com/watch?v=${broadcast.id}`,
+      liveChatId: broadcast.liveChatId,
+      rtmpUrl: ingest.rtmpUrl,
+      rtmpsUrl: ingest.rtmpsUrl,
+      key: ingest.key,
+      thumbnail,
+      thumbnailMessage,
+    });
+  } catch (e) {
+    return googleFail(c, e);
+  }
+});
+
+/** ends a broadcast this user started from the app: completed when it was live, removed when it never started */
+app.post("/api/device/youtube/broadcasts/:id/end", requireDevice, async (c) => {
+  const device = c.get("device");
+  const broadcastId = c.req.param("id");
+  const own = await c.env.DB.prepare("SELECT ended_at FROM youtube_broadcasts WHERE id = ? AND user_id = ?")
+    .bind(broadcastId, device.user_id)
+    .first<{ ended_at: number | null }>();
+  if (!own) return c.json({ error: "not_found", message: "이 계정으로 만든 방송이 아닙니다" }, 404);
+  if (own.ended_at) return c.json({ result: "already" });
+  try {
+    const link = await c.env.DB.prepare("SELECT refresh_token FROM youtube_links WHERE user_id = ?").bind(device.user_id).first<LinkRow>();
+    if (!link) throw new GoogleError("not_linked");
+    const access = await accessToken(c.env, await openToken(c.env, link.refresh_token));
+    const result = await endBroadcast(c.env, access, broadcastId);
+    await c.env.DB.prepare("UPDATE youtube_broadcasts SET ended_at = ? WHERE id = ?").bind(now(), broadcastId).run();
+    return c.json({ result });
+  } catch (e) {
+    return googleFail(c, e);
   }
 });
 

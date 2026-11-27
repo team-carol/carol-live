@@ -1234,3 +1234,133 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===================== youtube: channel link and broadcast presets ===================== */
+
+.yt-notice {
+  margin: 0 0 var(--crl-space-5);
+  padding: var(--crl-space-4) var(--crl-space-5);
+  border-radius: var(--crl-radius-control);
+  border: 1px solid var(--crl-border);
+  font-size: var(--crl-type-body-sm-size);
+}
+.yt-notice--ok {
+  color: var(--crl-success);
+  background: var(--crl-success-bg);
+  border-color: var(--crl-success-border);
+}
+.yt-notice--bad {
+  color: var(--crl-warning);
+  background: var(--crl-warning-bg);
+  border-color: var(--crl-warning-border);
+}
+.yt-channel.crl-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crl-space-5);
+}
+.yt-channel__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-3);
+  min-width: 0;
+}
+.yt-channel__note {
+  color: var(--crl-dim);
+}
+.yt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crl-space-4);
+  margin: var(--crl-space-8) 0 var(--crl-space-4);
+}
+.yt-head .crl-heading-4 {
+  color: var(--crl-ink);
+  margin: 0;
+}
+.yt-preset.crl-card {
+  justify-content: flex-start;
+}
+.yt-preset .rec__main {
+  flex: 1;
+}
+.yt-preset__title {
+  color: var(--crl-ink-soft);
+  overflow-wrap: anywhere;
+}
+.yt-preset__desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-line;
+}
+.yt-thumb {
+  width: 144px;
+  aspect-ratio: 16 / 9;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: var(--crl-radius-small);
+  border: 1px solid var(--crl-border);
+  background: var(--crl-canvas-alt);
+}
+.yt-thumb--large {
+  width: 100%;
+}
+.yt-thumb--none {
+  display: grid;
+  place-items: center;
+  color: var(--crl-faint);
+  font-size: var(--crl-type-caption-size);
+}
+.yt-edit.crl-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-5);
+  margin-bottom: var(--crl-space-4);
+}
+.yt-edit__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--crl-space-6);
+}
+.yt-edit__fields,
+.yt-edit__thumb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-4);
+  min-width: 0;
+}
+.yt-edit__thumb .crl-caption {
+  color: var(--crl-dim);
+}
+.yt-edit__thumb-actions,
+.yt-edit__actions {
+  display: flex;
+  gap: var(--crl-space-3);
+}
+@media (max-width: 720px) {
+  .yt-channel.crl-card,
+  .yt-preset.crl-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .yt-preset .yt-thumb {
+    width: 100%;
+  }
+  .yt-edit__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* four links and the logout button do not fit beside the name on a phone: the mark alone stays */
+@media (max-width: 480px) {
+  .crl-brand span {
+    display: none;
+  }
+  .crl-topbar__inner {
+    gap: var(--crl-space-3);
+  }
+}

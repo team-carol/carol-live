@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 
 class SettingsActivity : AppCompatActivity() {
 
+  private lateinit var rgStreamMode: RadioGroup
   private lateinit var etServer: EditText
   private lateinit var etKey: EditText
   private lateinit var etVideoBitrate: EditText
@@ -54,6 +55,9 @@ class SettingsActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_settings)
 
+    rgStreamMode = findViewById(R.id.rg_stream_mode)
+    rgStreamMode.setOnCheckedChangeListener { _, _ -> showStreamMode() }
+    findViewById<Button>(R.id.btn_open_youtube).setOnClickListener { openYoutubePage() }
     etServer = findViewById(R.id.et_server)
     etKey = findViewById(R.id.et_key)
     etVideoBitrate = findViewById(R.id.et_video_bitrate)
@@ -168,6 +172,25 @@ class SettingsActivity : AppCompatActivity() {
     }
   }
 
+  private fun selectedStreamMode() =
+    if (rgStreamMode.checkedRadioButtonId == R.id.mode_account) StreamMode.ACCOUNT else StreamMode.KEY
+
+  private fun showStreamMode() {
+    val account = selectedStreamMode() == StreamMode.ACCOUNT
+    findViewById<android.view.View>(R.id.box_stream_account).visibility = if (account) android.view.View.VISIBLE else android.view.View.GONE
+    findViewById<android.view.View>(R.id.box_stream_key).visibility = if (account) android.view.View.GONE else android.view.View.VISIBLE
+  }
+
+  /** the web page where the channel is linked and presets are kept */
+  private fun openYoutubePage() {
+    val paired = UploadConfig.paired(this)
+    if (paired == null) {
+      android.widget.Toast.makeText(this, "아래 업로드에서 서버에 먼저 연결해 주세요", android.widget.Toast.LENGTH_SHORT).show()
+      return
+    }
+    runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(paired.server.trimEnd('/') + "/youtube"))) }
+  }
+
   private fun saveUploadPrefs() {
     UploadConfig.setUploadPrefs(this, upAuto.isChecked, upMobile.isChecked, upDelete.isChecked)
   }
@@ -191,6 +214,8 @@ class SettingsActivity : AppCompatActivity() {
   }
 
   private fun fill(s: StreamSettings) {
+    rgStreamMode.check(if (s.streamMode == StreamMode.ACCOUNT) R.id.mode_account else R.id.mode_key)
+    showStreamMode()
     etServer.setText(s.serverUrl)
     etKey.setText(s.streamKey)
     etVideoBitrate.setText(s.videoBitrateKbps.toString())
@@ -272,6 +297,8 @@ class SettingsActivity : AppCompatActivity() {
   private fun save() {
     val server = etServer.text.toString().trim()
     if (!server.startsWith("rtmp://") && !server.startsWith("rtmps://")) {
+      // the field is hidden in account mode: bring it back so the error can be seen
+      rgStreamMode.check(R.id.mode_key)
       etServer.error = "rtmp:// 또는 rtmps:// 로 시작해야 합니다"
       etServer.requestFocus()
       return
@@ -290,6 +317,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     val settings = StreamSettings(
+      streamMode = selectedStreamMode(),
       serverUrl = server,
       streamKey = etKey.text.toString().trim(),
       resolution = selectedResolution(),

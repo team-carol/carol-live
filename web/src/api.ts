@@ -90,6 +90,28 @@ export interface DeviceInfo {
   last_seen_at: number | null;
 }
 
+export type YoutubePrivacy = "public" | "unlisted" | "private";
+
+/** a starting point for a broadcast: the app fills its form from one (title may hold {date}) */
+export interface YoutubePreset {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  privacy: YoutubePrivacy;
+  hasThumbnail: boolean;
+  updatedAt: number;
+}
+export type YoutubePresetInput = Pick<YoutubePreset, "name" | "title" | "description" | "privacy">;
+
+/** the linked channel and the presets; the app reads the same from /api/device/youtube/account */
+export interface YoutubeAccount {
+  /** false until the server has a Google OAuth client */
+  configured: boolean;
+  channel: { id: string; title: string } | null;
+  presets: YoutubePreset[];
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -106,8 +128,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, (body as { error?: string }).error ?? `요청에 실패했습니다 (${res.status})`);
+    // { error } is the message itself, or a code with the sentence in { message } (YouTube account API)
+    const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    throw new ApiError(res.status, body.message ?? body.error ?? `요청에 실패했습니다 (${res.status})`);
   }
   return res.json() as Promise<T>;
 }
@@ -130,6 +153,17 @@ export const api = {
   renameDevice: (id: string, name: string) =>
     call<{ ok: true; name: string }>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
   removeDevice: (id: string) => call<{ ok: true }>(`/api/devices/${id}`, { method: "DELETE" }),
+  youtube: () => call<YoutubeAccount>("/api/youtube"),
+  unlinkYoutube: () => call<{ ok: true }>("/api/youtube/link", { method: "DELETE" }),
+  createYoutubePreset: (p: YoutubePresetInput) => call<{ id: string }>("/api/youtube/presets", { method: "POST", body: JSON.stringify(p) }),
+  saveYoutubePreset: (id: string, p: YoutubePresetInput) =>
+    call<{ ok: true }>(`/api/youtube/presets/${id}`, { method: "PUT", body: JSON.stringify(p) }),
+  deleteYoutubePreset: (id: string) => call<{ ok: true }>(`/api/youtube/presets/${id}`, { method: "DELETE" }),
+  setYoutubeThumbnail: (id: string, image: Blob) =>
+    call<{ ok: true }>(`/api/youtube/presets/${id}/thumbnail`, { method: "PUT", body: image, headers: { "Content-Type": image.type } }),
+  deleteYoutubeThumbnail: (id: string) => call<{ ok: true }>(`/api/youtube/presets/${id}/thumbnail`, { method: "DELETE" }),
+  youtubeThumbUrl: (p: YoutubePreset) => `/api/youtube/presets/${p.id}/thumbnail?v=${p.updatedAt}`,
+  youtubeLinkUrl: "/auth/youtube",
   fileUrl: (id: string) => `/api/recordings/${id}/file`,
   thumbUrl: (id: string) => `/api/recordings/${id}/thumbnail`,
   downloadUrl: (id: string) => `/api/recordings/${id}/file?download=1`,

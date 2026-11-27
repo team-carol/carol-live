@@ -21,7 +21,16 @@ enum class MicMode(val label: String, val audioSource: Int) {
   }
 }
 
+/** how a broadcast is started */
+enum class StreamMode {
+  /** push to the address and stream key typed in settings */
+  KEY,
+  /** make a broadcast on the YouTube channel linked on the web, with a title, description and visibility ([YouTubeAccount]) */
+  ACCOUNT,
+}
+
 data class StreamSettings(
+  val streamMode: StreamMode = StreamMode.KEY,
   val serverUrl: String = DEFAULT_SERVER,
   val streamKey: String = "",
   val resolution: Resolution = Resolution.FHD,
@@ -77,6 +86,7 @@ object SettingsStore {
     val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val d = StreamSettings()
     return StreamSettings(
+      streamMode = enumOr(p.getString("streamMode", null), d.streamMode),
       serverUrl = p.getString("serverUrl", null) ?: d.serverUrl,
       streamKey = p.getString("streamKey", null) ?: d.streamKey,
       resolution = enumOr(p.getString("resolution", null), d.resolution),
@@ -101,6 +111,7 @@ object SettingsStore {
 
   fun save(context: Context, s: StreamSettings) {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+      .putString("streamMode", s.streamMode.name)
       .putString("serverUrl", s.serverUrl)
       .putString("streamKey", s.streamKey)
       .putString("resolution", s.resolution.name)
