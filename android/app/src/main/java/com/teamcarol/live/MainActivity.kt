@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
   private lateinit var txtVideoMeta: TextView
   private lateinit var txtAudioMeta: TextView
   private lateinit var txtRecordMeta: TextView
+  private lateinit var txtSongMeta: TextView
   private lateinit var txtExposure: TextView
   private lateinit var btnGoLive: Button
   private lateinit var btnSettings: Button
@@ -207,6 +208,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     txtVideoMeta = findViewById(R.id.txt_video_meta)
     txtAudioMeta = findViewById(R.id.txt_audio_meta)
     txtRecordMeta = findViewById(R.id.txt_record_meta)
+    txtSongMeta = findViewById(R.id.txt_song_meta)
     txtExposure = findViewById(R.id.txt_exposure)
     btnGoLive = findViewById(R.id.btn_go_live)
     btnSettings = findViewById(R.id.btn_settings)
@@ -362,6 +364,10 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     txtRecordMeta.setTextColor(
       color(if (free < Recordings.START_MIN_FREE_BYTES) R.color.crl_warning else R.color.crl_muted),
     )
+
+    val song = SongSpotter.describe()
+    txtSongMeta.visibility = if (song != null) View.VISIBLE else View.GONE
+    if (song != null) txtSongMeta.text = song
 
     if (streaming) {
       btnGoLive.text = "종료"

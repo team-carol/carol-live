@@ -385,6 +385,34 @@
           android:text="이 폰 화면에만 보이고 방송 영상에는 들어가지 않습니다. 화면이 꺼져 있을 때는 불러오지 않습니다" />
     </LinearLayout>
 
+    <!-- ===== 곡 인식 (실험) ===== -->
+    <LinearLayout style="@style/Crl.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+      <TextView style="@style/Crl.Text.CardTitle" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:text="곡 인식 (실험)" />
+
+      <androidx.appcompat.widget.SwitchCompat
+          android:id="@+id/sw_song_spotting"
+          style="@style/Crl.Switch"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_4"
+          android:text="방송·녹화 중 곡명 읽기" />
+      <TextView style="@style/Crl.Text.Helper" android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="화면에 찍힌 위쪽 모니터의 곡명을 몇 초마다 읽어서 이 폰 화면에 보여 줍니다. 실험 기능이라 틀리거나 읽지 못할 수 있습니다. 곡 목록은 maimai.team-carol.com에서 받아옵니다" />
+
+      <androidx.appcompat.widget.SwitchCompat
+          android:id="@+id/sw_song_overlay"
+          style="@style/Crl.Switch"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_4"
+          android:text="방송 화면에 곡명 얹기" />
+      <TextView style="@style/Crl.Text.Helper" android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="읽은 곡명을 방송 영상 왼쪽 아래에 띄웁니다. 녹화본에도 같이 들어갑니다. 끄면 이 폰 화면에만 보입니다" />
+    </LinearLayout>
+
     <!-- ===== 마이크 ===== -->
     <LinearLayout style="@style/Crl.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
       <TextView style="@style/Crl.Text.CardTitle" android:layout_width="wrap_content"

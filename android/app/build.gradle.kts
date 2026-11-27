@@ -76,4 +76,6 @@ dependencies {
   // background uploads that resume after network loss / reboot
   implementation(libs.androidx.work)
   implementation(libs.kotlinx.coroutines.android)
+  // experimental song title readout (SongSpotter): the model ships inside the APK, nothing is sent anywhere
+  implementation(libs.mlkit.text.japanese)
 }

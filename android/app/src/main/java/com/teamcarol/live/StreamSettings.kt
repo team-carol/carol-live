@@ -43,6 +43,10 @@ data class StreamSettings(
   val showChat: Boolean = true,
   /** presses button clicks in the mic signal before encoding (stream and recording) */
   val clickLimiter: ClickLimiter.Level = ClickLimiter.Level.OFF,
+  /** experimental: read the song title off the upper monitor while live ([SongSpotter]) */
+  val songSpotting: Boolean = false,
+  /** put the recognized title on the stream itself (it ends up in the recording too) */
+  val songOverlay: Boolean = false,
 ) {
   val hasKey: Boolean get() = streamKey.isNotBlank()
 
@@ -90,6 +94,8 @@ object SettingsStore {
       youtubeChannel = p.getString("youtubeChannel", null) ?: d.youtubeChannel,
       showChat = p.getBoolean("showChat", d.showChat),
       clickLimiter = ClickLimiter.Level.of(p.getString("clickLimiter", null)),
+      songSpotting = p.getBoolean("songSpotting", d.songSpotting),
+      songOverlay = p.getBoolean("songOverlay", d.songOverlay),
     )
   }
 
@@ -112,6 +118,8 @@ object SettingsStore {
       .putString("youtubeChannel", s.youtubeChannel)
       .putBoolean("showChat", s.showChat)
       .putString("clickLimiter", s.clickLimiter.name)
+      .putBoolean("songSpotting", s.songSpotting)
+      .putBoolean("songOverlay", s.songOverlay)
       .apply()
   }
 
