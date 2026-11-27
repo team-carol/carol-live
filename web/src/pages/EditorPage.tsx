@@ -7,6 +7,7 @@ import { decodeCounts, findSongs, matchPlays, type Song } from "../lib/songs";
 import { youtubeChapters } from "../lib/chapters";
 import { achievementText, difficultyLabel, difficultyStyle, marks, playFilePart, rankColor, rankLabel } from "../lib/maimai";
 import { link } from "../router";
+import { ShortsCard } from "./ShortsCard";
 
 interface Clip {
   name: string;
@@ -34,6 +35,8 @@ export function EditorPage({ id }: { id: string }) {
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
   const [picked, setPicked] = useState<number | null>(null);
+  const [shortsFor, setShortsFor] = useState<number | null>(null);
+  const [shortsBusy, setShortsBusy] = useState(false);
   const previewUntil = useRef<number | null>(null);
 
   useEffect(() => {
@@ -302,7 +305,7 @@ export function EditorPage({ id }: { id: string }) {
                       <Button
                         variant="primary"
                         size="sm"
-                        disabled={!!busy}
+                        disabled={!!busy || shortsBusy}
                         onClick={() => {
                           const r = songRange(x);
                           setPicked(i);
@@ -313,6 +316,20 @@ export function EditorPage({ id }: { id: string }) {
                       >
                         받기
                       </Button>
+                      {x.play && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={shortsBusy}
+                          onClick={() => {
+                            pickSong(i);
+                            setShortsFor(i);
+                          }}
+                          aria-label={`${i + 1}번 곡 쇼츠 만들기`}
+                        >
+                          쇼츠
+                        </Button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -324,6 +341,21 @@ export function EditorPage({ id }: { id: string }) {
               </p>
             )}
           </Card>
+
+          {shortsFor !== null && songs[shortsFor]?.play && (
+            <ShortsCard
+              play={songs[shortsFor].play}
+              video={video}
+              fileUrl={api.fileUrl(rec.id)}
+              from={start}
+              to={end}
+              name={songName(songs[shortsFor], shortsFor).replace(/\.mp4$/, "_shorts.mp4")}
+              disabled={!!busy || !valid}
+              onBusy={setShortsBusy}
+              onDone={(c) => setClips((list) => [c, ...list])}
+              onClose={() => setShortsFor(null)}
+            />
+          )}
 
           {songs.length > 0 && <ChaptersCard rec={rec} songs={songs} />}
 
@@ -390,7 +422,7 @@ export function EditorPage({ id }: { id: string }) {
               <Button variant="secondary" onClick={preview} disabled={!valid}>
                 구간 미리보기
               </Button>
-              <Button variant="primary" onClick={cut} disabled={!valid || !!busy}>
+              <Button variant="primary" onClick={cut} disabled={!valid || !!busy || shortsBusy}>
                 {busy ? "만드는 중…" : "잘라서 받기"}
               </Button>
             </div>

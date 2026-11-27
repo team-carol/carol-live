@@ -307,6 +307,82 @@
   display: flex;
   gap: var(--crl-space-2);
 }
+/* three buttons do not fit beside the title on a phone: they go on their own line */
+@media (max-width: 640px) {
+  .song {
+    flex-wrap: wrap;
+  }
+  .song__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* shorts: preview with the song card, card position, encode */
+.shorts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-3);
+}
+.shorts .shorts__close {
+  flex: none;
+  padding-inline: var(--crl-space-5);
+}
+.shorts__body {
+  display: flex;
+  gap: var(--crl-space-4);
+  align-items: flex-start;
+}
+.shorts__preview {
+  flex: none;
+  width: 44%;
+  max-width: 220px;
+  height: auto;
+  aspect-ratio: 9 / 16;
+  border-radius: var(--crl-radius-control);
+  border: 1px solid var(--crl-border);
+  background: var(--crl-canvas-alt);
+  cursor: ns-resize;
+  touch-action: none;
+}
+.shorts__controls {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--crl-space-3);
+}
+.shorts__slider {
+  width: 100%;
+  accent-color: var(--crl-accent);
+}
+.shorts__controls .nudges {
+  flex-wrap: wrap;
+}
+.shorts__controls .nudge {
+  flex: none;
+  padding-inline: var(--crl-space-4);
+  white-space: nowrap;
+}
+.shorts .nudge.is-on {
+  background: var(--crl-accent);
+  color: var(--crl-accent-ink);
+}
+.shorts .nudge:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.shorts__bar {
+  height: 6px;
+  border-radius: var(--crl-radius-pill);
+  background: var(--crl-surface-2);
+  overflow: hidden;
+}
+.shorts__bar > div {
+  height: 100%;
+  background: var(--crl-accent);
+  transition: width 0.3s linear;
+}
 
 /* YouTube chapters */
 .chapters {

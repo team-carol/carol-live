@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@team-carol/design-system": "^0.1.1",
+    "mediabunny": "^1.66.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

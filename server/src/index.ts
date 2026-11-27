@@ -367,6 +367,32 @@ app.post("/api/plays", requireUser, async (c) => {
   return c.json({ received: rows.length, added: (after?.n ?? 0) - (before?.n ?? 0), from: range.from, to: range.to });
 });
 
+/**
+ * maimai DX NET images (jacket, ST/DX badge, rank, FC/sync marks) for the shorts card.
+ * The browser can't draw them onto a canvas straight from maimai DX NET (no CORS header), so they pass
+ * through here. Only these image paths are allowed, they need no maimai login, and nothing is stored.
+ */
+const MAIMAI_IMG_BASE = "https://maimaidx-eng.com/maimai-mobile/img/";
+const MAIMAI_IMG_PATH = /^(Music\/[0-9a-f]{8,32}|playlog\/[a-z0-9_]{1,24}|music_(dx|standard)|diff_[a-z]{1,12})\.png$/;
+const MAIMAI_IMG_MAX_BYTES = 2 * 1024 * 1024;
+
+app.get("/api/maimai/img/:dir{[A-Za-z]+}/:file", requireUser, (c) => maimaiImage(c, `${c.req.param("dir")}/${c.req.param("file")}`));
+app.get("/api/maimai/img/:file", requireUser, (c) => maimaiImage(c, c.req.param("file")));
+
+async function maimaiImage(c: Ctx, path: string): Promise<Response> {
+  if (!MAIMAI_IMG_PATH.test(path)) return c.json({ error: "not found" }, 404);
+  const res = await fetch(MAIMAI_IMG_BASE + path, { redirect: "error", cf: { cacheTtl: 86400, cacheEverything: true } }).catch(
+    () => null,
+  );
+  const length = Number(res?.headers.get("Content-Length") ?? 0);
+  if (!res?.ok || !(res.headers.get("Content-Type") ?? "").startsWith("image/") || length > MAIMAI_IMG_MAX_BYTES) {
+    return c.json({ error: "이미지를 못 받아옴" }, 502);
+  }
+  return new Response(res.body, {
+    headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=604800" },
+  });
+}
+
 app.delete("/api/recordings/:id", requireUser, async (c) => {
   const rec = await ownRecording(c);
   if (!rec) return c.json({ error: "not found" }, 404);

@@ -39,9 +39,11 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 - `web/src/lib/mp4trim.ts`: moov를 Range로 읽고 필요한 샘플 바이트만 받아 새 mp4를 씀 (재인코딩 없음)
 - `web/src/lib/songs.ts`: 초당 클릭 수로 곡 구간 나누기(`findSongs`) + maimai 기록을 시간으로 맞추기(`matchPlays`). 기준값은 `web/test/fixtures/analysis-58min.json`(실제 58분 방송)과 `test/songs.test.ts`로 고정됨. 바꾸면 테스트가 통과해야 함
 - `web/src/lib/chapters.ts`: 곡 목록 → 유튜브 설명란 챕터 (0:00 시작, 3개 이상, 10초 이상 규칙)
+- `web/src/lib/shorts/`: 곡 구간 → 쇼츠 mp4. `card.ts`(곡 카드를 캔버스에 그림, 수치는 mai-log Figma 카드 그대로), `images.ts`(카드에 쓰는 maimai DX NET 이미지 경로, 순수 함수),
+  `render.ts`(mediabunny로 디코드 → 카드 얹기 → H.264 인코드, 오디오는 복사. 편집 화면에서 필요할 때만 불러옴)
 - `web/src/lib/maimaiLabels.ts`: 난이도·랭크·FC/AP 라벨과 게임 색(`@team-carol/design-system/game`). node 테스트에서도 불러오게 번들러 전용 import 금지
 - `web/src/lib/maimaiScrape.js`: maimai DX NET 기록 페이지에서 도는 북마클릿 본체 (순수 JS, 다른 파일 import 금지). 그 사이트 HTML에 기대고 있음
-- `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `MaimaiPage`(기록 연결 안내 + `/import`), `DevicesPage`, `LoginPage`
+- `web/src/pages/`: `DrivePage`(목록), `EditorPage`(곡 목록 + 자르기), `ShortsCard`(쇼츠 미리보기·카드 위치·인코딩), `MaimaiPage`(기록 연결 안내 + `/import`), `DevicesPage`, `LoginPage`
 - `web/src/api.ts`: 서버 타입·호출. `web/src/router.ts`: pathname 기반 간단한 라우터 (워커가 SPA fallback으로 index.html을 줌)
 
 ## 명령어
@@ -81,6 +83,7 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 
 - `LiveSummary.toWebJson()` 키와 `web/src/api.ts`의 `LiveSummary` 타입은 같이 바꿈
 - `GameActivity.toAnalysisJson()`(`clicksPerSecond`: 1초 1바이트 base64)와 `api.ts`의 `RecordingAnalysis`도 같이 바꿈. 곡 나누는 규칙은 웹에만 둠 (앱 릴리스 없이 고칠 수 있게)
+- 쇼츠 카드의 모양(`shorts/card.ts`)은 Figma mai-log 카드가 기준. 카드 색은 영상에 얹는 그림이라 `--crl-*` 토큰이 아니라 `card.ts` 상수에 둠 (난이도 색은 디자인 시스템 game 토큰)
 - maimai 기록은 `plays` 테이블(사용자별, `(played_at, track, title)`로 중복 없음). 녹화 상세 API가 녹화 시간 앞 5분~뒤 10분의 기록을 같이 내려줌
 - 업로드 조각 크기는 서버(`PART_SIZE`)가 정해서 내려줌. 앱은 받은 `partSize`를 씀. `/api/device/*` 응답 모양을 바꾸면 `Uploads.kt`도 같이 고침
 - 이미 배포된 앱이 있으니 기기 API는 하위 호환을 유지함 (필드 추가는 OK, 이름 변경·삭제는 피함)
@@ -103,6 +106,8 @@ CI(`.github/workflows/ci.yml`)는 PR과 main 푸시에서 android debug 빌드, 
 - 기기 토큰은 서버에 sha256 해시로만 저장. 페어링은 앱이 만든 nonce가 돌아와야만 받아들임
 - 웹 API는 항상 로그인한 사용자 본인의 녹화만 돌려줌 (`user_id` 조건 빠뜨리지 않기). maimai 기록(`plays`)도 마찬가지
 - maimai DX NET 로그인 정보는 다루지 않음. 북마클릿은 사용자가 보고 있는 기록 페이지의 DOM만 읽고, 데이터는 URL fragment로 `/import`에 넘김
+- `/api/maimai/img/*`는 maimai DX NET 이미지 중계. 정해진 경로(`Music/`, `playlog/`, `music_*`, `diff_*`의 png)만 통과시키고 로그인한 사용자만 씀. 아무 주소나 받아오게 넓히지 않음.
+  게임 이미지는 레포에 넣지 않고 그때그때 받아옴
 
 ## 릴리스
 
