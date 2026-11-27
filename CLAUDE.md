@@ -28,7 +28,7 @@ web/      React 19 + Vite + @team-carol/design-system — 드라이브형 녹화
 | `Updates.kt` / `UpdateDialog.kt` | GitHub 최신 릴리스 확인(6시간 간격), 새 버전 안내 |
 | `GameActivity.kt` | 마이크 원음에서 초당 버튼 클릭 수를 셈 → 녹화별로 잘라 업로드 때 `analysis`로 보냄. `MicEffects`가 감지기 → 리미터 순서로 묶음 |
 | `ClickLimiter.kt` | 버튼 소리 줄이기 (끔/약/강). `tools/click-limiter.mjs`가 1:1 포트 |
-| `SongSpotter.kt` | 실험: 방송 중 위쪽 모니터의 곡명을 몇 초마다 읽음(ML Kit 일본어 모델, 폰 안에서만). 곡 목록(`maimai.team-carol.com/api/aliases`)과 대조해 두 번 연속 같으면 확정. 화면은 `LiveSession.grabFrame`으로만 받고, 방송에 얹는 것도 `LiveSession.setSongOverlay`로만 함. 기본 꺼짐 |
+| `SongSpotter.kt` | 실험: 방송 중 위쪽 모니터의 곡명을 몇 초마다 읽음(ML Kit 일본어 모델, 폰 안에서만). 곡 목록(앱에 든 `assets/song_titles.txt` + 하루 한 번 받는 `maimai.team-carol.com/api/aliases`의 원제목)과 대조해 두 번 연속 같으면 확정. 안 되는 이유는 화면 정보 줄에 그대로 보여 줌. 화면은 `LiveSession.grabFrame`으로만 받고, 방송에 얹는 것도 `LiveSession.setSongOverlay`로만 함. 기본 꺼짐 |
 | `YouTubeChat.kt` | 방송 화면 유튜브 채팅. 서버 `/api/device/youtube/*`로 라이브 찾기·채팅 폴링. 화면이 보일 때만 돎 |
 
 ### server/src, web/src
