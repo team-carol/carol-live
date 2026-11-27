@@ -35,4 +35,6 @@
   //   npx wrangler secret put DISCORD_CLIENT_SECRET
   //   npx wrangler secret put ALLOWED_DISCORD_IDS   comma separated Discord user ids that may log in
   //   npx wrangler secret put YOUTUBE_API_KEY       YouTube Data API v3 key for the phone's chat overlay
+  //   npx wrangler secret put GOOGLE_CLIENT_ID      OAuth client (Web application) for linking a YouTube channel
+  //   npx wrangler secret put GOOGLE_CLIENT_SECRET  ... and its secret (README: 유튜브 계정으로 방송)
 }

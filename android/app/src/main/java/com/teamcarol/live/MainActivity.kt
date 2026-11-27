@@ -89,6 +89,20 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
       if (result.resultCode == RESULT_OK && !session.isActive) recreate()
     }
 
+  /** a broadcast made on the go-live screen, waiting for the preview to be back before the stream starts */
+  private var startWhenReady: LiveSession.Broadcast? = null
+
+  private val goLiveLauncher =
+    registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+      val made = GoLiveActivity.takeCreated() ?: return@registerForActivityResult
+      if (result.resultCode != RESULT_OK) {
+        YouTubeAccount.endLater(this, made.id)
+        return@registerForActivityResult
+      }
+      // this arrives before the preview surface is back; the stream starts once it is attached
+      if (surfaceReady) startBroadcast(made) else startWhenReady = made
+    }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     session.init(this)
@@ -109,6 +123,7 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
       override fun surfaceCreated(holder: SurfaceHolder) {
         surfaceReady = true
         if (hasPermissions()) session.attachPreview(preview)
+        startPending()
       }
 
       override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -157,6 +172,8 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
   override fun onResume() {
     super.onResume()
     showPendingSummary()
+    // should the surface not come back (it normally does right after this), start without the preview
+    if (startWhenReady != null) preview.postDelayed({ startPending() }, 1500)
   }
 
   override fun onStop() {
@@ -249,9 +266,13 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
   @SuppressLint("ClickableViewAccessibility")
   private fun wireControls() {
     btnGoLive.setOnClickListener {
-      if (session.isStreaming) confirmStop() else session.startStream()?.let { error ->
-        toast(error)
-        if (!session.settings.hasKey) openSettings()
+      when {
+        session.isStreaming -> confirmStop()
+        session.settings.streamMode == StreamMode.ACCOUNT -> openGoLive()
+        else -> session.startStream()?.let { error ->
+          toast(error)
+          if (!session.settings.hasKey) openSettings()
+        }
       }
     }
     btnSettings.setOnClickListener { openSettings() }
@@ -274,10 +295,39 @@ class MainActivity : AppCompatActivity(), LiveSession.Listener {
     }
   }
 
+  /** YouTube account mode: title, description and visibility first; the stream starts when that screen returns */
+  private fun openGoLive() {
+    if (!session.prepared) {
+      toast(session.prepareError ?: "아직 준비되지 않았습니다")
+      return
+    }
+    goLiveLauncher.launch(Intent(this, GoLiveActivity::class.java))
+  }
+
+  private fun startPending() {
+    val made = startWhenReady ?: return
+    startWhenReady = null
+    startBroadcast(made)
+  }
+
+  private fun startBroadcast(made: LiveSession.Broadcast) {
+    val error = session.startStream(made)
+    if (error != null) {
+      toast(error)
+      // nothing will be pushed to it: take it off the channel again
+      YouTubeAccount.endLater(this, made.id)
+    } else {
+      toast("유튜브 방송을 만들었습니다: ${made.title}")
+    }
+  }
+
   private fun confirmStop() {
     AlertDialog.Builder(this)
       .setTitle("방송 종료")
-      .setMessage(if (session.isRecording) "방송과 녹화를 같이 끝낼까요?" else "방송을 끝낼까요?")
+      .setMessage(
+        (if (session.isRecording) "방송과 녹화를 같이 끝낼까요?" else "방송을 끝낼까요?") +
+          if (session.broadcast != null) " 유튜브 방송도 같이 끝납니다." else "",
+      )
       .setPositiveButton("종료") { _, _ -> session.stopAll() }
       .setNegativeButton("취소", null)
       .show()

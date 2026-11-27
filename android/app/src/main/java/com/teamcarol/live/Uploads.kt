@@ -241,7 +241,8 @@ object Uploads {
 
 // ============================================================================ http
 
-class HttpError(val code: Int, message: String) : IOException(message)
+/** [message] is the server's error code (or "HTTP 500"); [detail] the sentence for the user, when the server sent one */
+class HttpError(val code: Int, message: String, val detail: String? = null) : IOException(message)
 
 internal object Api {
   fun request(paired: UploadConfig.Paired, method: String, path: String, json: JSONObject? = null): JSONObject {
@@ -303,8 +304,9 @@ internal object Api {
       val stream = if (code in 200..299) conn.inputStream else conn.errorStream
       val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
       if (code !in 200..299) {
-        val msg = runCatching { JSONObject(text).optString("error") }.getOrNull()?.takeIf { it.isNotEmpty() } ?: "HTTP $code"
-        throw HttpError(code, msg)
+        val o = runCatching { JSONObject(text) }.getOrNull()
+        val msg = o?.optString("error")?.takeIf { it.isNotEmpty() } ?: "HTTP $code"
+        throw HttpError(code, msg, o?.optString("message")?.takeIf { it.isNotEmpty() })
       }
       return if (text.isBlank()) JSONObject() else JSONObject(text)
     } finally {

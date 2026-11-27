@@ -38,6 +38,12 @@ object LiveSession : ConnectChecker {
 
   enum class State { IDLE, CONNECTING, LIVE, RETRYING }
 
+  /**
+   * A broadcast made on the linked YouTube account ([YouTubeAccount]). [endpoint] holds its stream key: it lives
+   * in memory while the broadcast does and is never saved or logged.
+   */
+  class Broadcast(val id: String, val endpoint: String, val liveChatId: String?, val watchUrl: String, val title: String)
+
   interface Listener {
     fun onChanged()
     fun onMessage(text: String)
@@ -92,6 +98,10 @@ object LiveSession : ConnectChecker {
 
   /** the recognized song drawn into the picture (stream, recording and preview alike), when that is asked for */
   private var songOverlay: ImageFilterRender? = null
+
+  /** the account broadcast being pushed to; null with a stream key from settings */
+  var broadcast: Broadcast? = null
+    private set
 
   private var userStopped = false
   private var recordFile: File? = null
@@ -368,18 +378,23 @@ object LiveSession : ConnectChecker {
 
   // ------------------------------------------------------------------ stream
 
-  /** @return an error message for the user, or null when the stream is starting */
-  fun startStream(): String? {
+  /**
+   * Starts pushing to [to], or to the address and key in settings when it is null.
+   * @return an error message for the user, or null when the stream is starting
+   */
+  fun startStream(to: Broadcast? = null): String? {
     val s = stream ?: return "아직 준비되지 않았습니다"
     if (!prepared) return prepareError ?: "아직 준비되지 않았습니다"
-    if (s.isStreaming) return null
-    if (!settings.hasKey) return "설정에서 스트림 키부터 넣어 주세요"
+    if (s.isStreaming) return if (to == null) null else "이미 방송 중입니다"
+    if (to == null && !settings.hasKey) return "설정에서 스트림 키부터 넣어 주세요"
     beginSession().streamed = true
     userStopped = false
     liveSince = 0L
     lastStats = null
     state = State.CONNECTING
-    s.startStream(settings.endpoint)
+    broadcast = to
+    YouTubeChat.attach(to?.liveChatId, to?.title)
+    s.startStream(to?.endpoint ?: settings.endpoint)
     if (settings.autoRecord && !s.isRecording) startRecording(auto = true)
     LiveService.start(app)
     scheduleCameraTuning(0)
@@ -393,8 +408,17 @@ object LiveSession : ConnectChecker {
     stopRecording(null, quiet = true)
     stream?.let { if (it.isStreaming) it.stopStream() }
     state = State.IDLE
+    streamEnded()
     endSessionIfIdle(reason)
     changed()
+  }
+
+  /** The stream is over (stopped, or given up on). An account broadcast is ended on YouTube; it does not end by itself. */
+  private fun streamEnded() {
+    val b = broadcast ?: return
+    broadcast = null
+    YouTubeChat.attach(null, null)
+    YouTubeAccount.endLater(app, b.id)
   }
 
   // ------------------------------------------------------------------ recording
@@ -549,6 +573,7 @@ object LiveSession : ConnectChecker {
         // network is gone but the local recording is still good: keep it running
         s.stopStream()
         state = State.IDLE
+        streamEnded()
         message("방송 연결이 끊겼습니다. 녹화는 계속됩니다 ($reason)")
       } else {
         stopAll("연결 실패: $reason")
@@ -569,8 +594,9 @@ object LiveSession : ConnectChecker {
 
   override fun onAuthError() {
     ui.post {
+      val account = broadcast != null
       stopAll("인증 실패")
-      message("인증에 실패했습니다. 스트림 키를 확인해 주세요")
+      message(if (account) "유튜브가 송출을 받지 않았습니다. 잠시 뒤 다시 시작해 주세요" else "인증에 실패했습니다. 스트림 키를 확인해 주세요")
     }
   }
 

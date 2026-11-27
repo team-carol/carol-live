@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/crl_canvas"
+    android:fillViewport="true">
+
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:paddingStart="@dimen/crl_space_6"
+      android:paddingTop="@dimen/crl_space_7"
+      android:paddingEnd="@dimen/crl_space_6"
+      android:paddingBottom="@dimen/crl_space_9">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+      <TextView
+          style="@style/Crl.Text.Heading2"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="유튜브 방송 시작" />
+      <Button
+          android:id="@+id/live_close"
+          style="@style/Crl.Button.Secondary.Small"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="닫기" />
+    </LinearLayout>
+
+    <!-- ===== 채널 ===== -->
+    <LinearLayout style="@style/Crl.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:gravity="center_vertical"
+          android:orientation="horizontal">
+        <TextView
+            android:id="@+id/live_channel"
+            style="@style/Crl.Text.CardTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="채널" />
+        <TextView
+            android:id="@+id/live_tag"
+            style="@style/Crl.Tag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="확인 중" />
+      </LinearLayout>
+      <TextView
+          android:id="@+id/live_status"
+          style="@style/Crl.Text.BodySm"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3"
+          android:text="서버에서 채널과 프리셋을 불러오는 중입니다" />
+      <LinearLayout
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_4"
+          android:orientation="horizontal">
+        <Button
+            android:id="@+id/live_web"
+            style="@style/Crl.Button.Secondary.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="웹에서 채널·프리셋 관리" />
+        <Button
+            android:id="@+id/live_reload"
+            style="@style/Crl.Button.Secondary.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/crl_space_3"
+            android:text="다시 불러오기" />
+      </LinearLayout>
+    </LinearLayout>
+
+    <!-- ===== 방송 정보 ===== -->
+    <LinearLayout style="@style/Crl.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+      <TextView style="@style/Crl.Text.CardTitle" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:text="방송 정보" />
+
+      <TextView style="@style/Crl.Text.Label" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_5"
+          android:text="프리셋" />
+      <HorizontalScrollView
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3"
+          android:scrollbars="none">
+        <RadioGroup
+            android:id="@+id/live_presets"
+            style="@style/Crl.Tabs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+      </HorizontalScrollView>
+      <TextView
+          android:id="@+id/live_preset_note"
+          style="@style/Crl.Text.Helper"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3" />
+
+      <TextView style="@style/Crl.Text.Label" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_5"
+          android:text="제목" />
+      <EditText
+          android:id="@+id/live_title"
+          style="@style/Crl.Input"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3"
+          android:hint="오늘 방송 제목"
+          android:importantForAutofill="no"
+          android:inputType="text"
+          android:maxLength="100" />
+
+      <TextView style="@style/Crl.Text.Label" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_5"
+          android:text="설명" />
+      <EditText
+          android:id="@+id/live_description"
+          style="@style/Crl.Input"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3"
+          android:gravity="top|start"
+          android:importantForAutofill="no"
+          android:inputType="textMultiLine"
+          android:maxLength="5000"
+          android:maxLines="8"
+          android:minLines="3"
+          android:singleLine="false" />
+
+      <TextView style="@style/Crl.Text.Label" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_5"
+          android:text="공개 범위" />
+      <RadioGroup android:id="@+id/live_privacy" style="@style/Crl.Tabs"
+          android:layout_width="wrap_content" android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3">
+        <RadioButton android:id="@+id/live_public" style="@style/Crl.Tab"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="공개" />
+        <RadioButton android:id="@+id/live_unlisted" style="@style/Crl.Tab"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="일부 공개" />
+        <RadioButton android:id="@+id/live_private" style="@style/Crl.Tab"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="비공개" />
+      </RadioGroup>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/live_error"
+        style="@style/Crl.Text.BodySm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/crl_space_4"
+        android:textColor="@color/crl_danger"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/live_start"
+        style="@style/Crl.Button.Primary.Large"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/crl_space_5"
+        android:text="방송 시작" />
+    <TextView
+        style="@style/Crl.Text.Helper"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/crl_space_3"
+        android:text="누르면 채널에 방송이 만들어지고 바로 송출을 시작합니다. 종료를 누르면 유튜브 방송도 같이 끝납니다" />
+  </LinearLayout>
+</ScrollView>

@@ -49,6 +49,43 @@
 
       <TextView style="@style/Crl.Text.Label" android:layout_width="wrap_content"
           android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_5"
+          android:text="방송 시작 방식" />
+      <RadioGroup android:id="@+id/rg_stream_mode" style="@style/Crl.Tabs"
+          android:layout_width="wrap_content" android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/crl_space_3">
+        <RadioButton android:id="@+id/mode_key" style="@style/Crl.Tab"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="스트림 키" />
+        <RadioButton android:id="@+id/mode_account" style="@style/Crl.Tab"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="유튜브 계정" />
+      </RadioGroup>
+
+      <!-- 유튜브 계정: 방송을 만들 때마다 서버가 송출 주소를 내려줌 -->
+      <LinearLayout
+          android:id="@+id/box_stream_account"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:visibility="gone">
+        <TextView style="@style/Crl.Text.Helper" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_4"
+            android:text="방송 시작을 누르면 제목·설명·공개 범위를 정하는 화면이 먼저 나오고, 웹에서 연결한 유튜브 채널에 방송을 만들어 송출합니다. 스트림 키는 쓰지 않습니다. 아래 업로드의 서버 연결이 필요합니다" />
+        <Button
+            android:id="@+id/btn_open_youtube"
+            style="@style/Crl.Button.Secondary.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/crl_space_4"
+            android:text="웹에서 채널 연결·프리셋 관리" />
+      </LinearLayout>
+
+      <!-- 스트림 키: 주소와 키를 직접 넣음 -->
+      <LinearLayout
+          android:id="@+id/box_stream_key"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical">
+      <TextView style="@style/Crl.Text.Label" android:layout_width="wrap_content"
+          android:layout_height="wrap_content" android:layout_marginTop="@dimen/crl_space_5"
           android:text="서버 주소" />
       <EditText
           android:id="@+id/et_server"
@@ -83,6 +120,7 @@
       <TextView style="@style/Crl.Text.Helper" android:layout_width="wrap_content"
           android:layout_height="wrap_content"
           android:text="키는 이 폰에만 저장되고 백업에도 올라가지 않습니다" />
+      </LinearLayout>
     </LinearLayout>
 
     <!-- ===== 영상 ===== -->
