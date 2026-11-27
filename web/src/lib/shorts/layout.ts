@@ -6,7 +6,7 @@ import { CARD, drawSongCard, type CardImages } from "./card.ts";
 import { canvas, roundRect, type Ctx } from "./draw.ts";
 import { cardImageUrls, type CardImageKey } from "./images.ts";
 import { PROFILE, drawProfileCard } from "./profile.ts";
-import { drawStats } from "./stats.ts";
+import { drawStats, drawStatsScrim } from "./stats.ts";
 
 export const SHORTS = { width: 1080, height: 1920 };
 export const CARD_MAX_Y = SHORTS.height - CARD.height - CARD.shadow;
@@ -38,13 +38,15 @@ export interface FootageOptions {
 export function cardLayout(play: Play, images: CardImages, y: number, footage: FootageOptions): ShortsLayout {
   const overlay = canvas(SHORTS.width, SHORTS.height);
   const ctx = overlay.getContext("2d")!;
+  // the result goes on the footage: right under a card in the upper half, else at the top of the frame
+  const upper = y + CARD.height / 2 < SHORTS.height / 2;
+  const top = upper ? y + CARD.height + CARD.shadow + STATS_GAP : TOP_SAFE;
+  drawStatsScrim(ctx, play, upper ? y + CARD.height / 2 : 0, top);
   ctx.save();
   ctx.translate(CARD.x, y);
   drawSongCard(ctx, play, images);
   ctx.restore();
-  // the result goes on the footage: right under a card in the upper half, else at the top of the frame
-  const below = y + CARD.height + CARD.shadow + STATS_GAP;
-  drawStats(ctx, play, y + CARD.height / 2 < SHORTS.height / 2 ? below : TOP_SAFE);
+  drawStats(ctx, play, top);
   return { footage: FULL, ...footage, overlay };
 }
 
@@ -73,6 +75,8 @@ export function legacyLayout(play: Play, profile: MaimaiProfile | null, images: 
   const overlay = canvas(SHORTS.width, SHORTS.height);
   const ctx = overlay.getContext("2d")!;
   const top = opts.songCard;
+  const statsTop = !top ? TOP_SAFE : (opts.background ? LEGACY.title.h : LEGACY.cardY + CARD.height + CARD.shadow) + STATS_GAP;
+  drawStatsScrim(ctx, play, !top ? 0 : opts.background ? LEGACY.footage.y : LEGACY.cardY + CARD.height / 2, statsTop);
   if (opts.background) {
     if (top) panel(ctx, LEGACY.title.y, LEGACY.title.h, [0, 0, 8, 8]);
     // the bottom panel has an offset shadow; only its top edge is inside the frame
@@ -87,7 +91,7 @@ export function legacyLayout(play: Play, profile: MaimaiProfile | null, images: 
     drawSongCard(ctx, play, images);
     ctx.restore();
   }
-  drawStats(ctx, play, !top ? TOP_SAFE : (opts.background ? LEGACY.title.h : LEGACY.cardY + CARD.height + CARD.shadow) + STATS_GAP);
+  drawStats(ctx, play, statsTop);
   if (profile) {
     ctx.save();
     ctx.translate(PROFILE.x, PROFILE.y);

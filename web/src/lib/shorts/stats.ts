@@ -27,21 +27,41 @@ const markLook = (label: string) => MARK[label.replace("+", "")] ?? MARK.sync;
 
 export const STATS = { margin: 44, size: 78, achievement: 78, gap: 20, stroke: 6, drop: 6 };
 
+/** rank and marks, top to bottom. An ALL PERFECT says the rank already, as in the old shorts. */
+function rightSide(play: Play): { text: string; look: Look }[] {
+  const d = play.details ?? {};
+  const rank = rankLabel(d.rank);
+  const fc = markOf(d.fc);
+  const sync = markOf(d.sync);
+  const out: { text: string; look: Look }[] = [];
+  if (rank && !(fc && fc.label.startsWith("AP"))) out.push({ text: rank, look: rankLook(rank) });
+  if (fc) out.push({ text: fc.label, look: markLook(fc.label) });
+  if (sync) out.push({ text: sync.label, look: markLook(sync.label) });
+  return out;
+}
+
+/**
+ * A soft dark band behind the lettering so it reads on bright footage: strongest at [from], gone a little below
+ * the last line. Draw it before anything that should sit on top of it.
+ */
+export function drawStatsScrim(ctx: Ctx, play: Play, from: number, top: number) {
+  const lines = Math.max(1, rightSide(play).length);
+  const end = top + lines * (STATS.size * CAP + STATS.gap) + 110;
+  const g = ctx.createLinearGradient(0, from, 0, end);
+  g.addColorStop(0, "rgba(0, 0, 0, 0.5)");
+  g.addColorStop(0.55, "rgba(0, 0, 0, 0.28)");
+  g.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, from, 1080, end - from);
+}
+
 /** [top] is where the upper edge of the lettering goes; the footage should be free below it */
 export function drawStats(ctx: Ctx, play: Play, top: number, left = STATS.margin, right = 1080 - STATS.margin) {
   const d = play.details ?? {};
   const line = STATS.size * CAP;
   const rank = rankLabel(d.rank);
-  const fc = markOf(d.fc);
-  const sync = markOf(d.sync);
   const letters = { size: STATS.size, width: STATS.stroke, drop: STATS.drop, align: "right" as const };
-
-  // an ALL PERFECT says the rank already, as in the old shorts
-  const right_side: { text: string; look: Look }[] = [];
-  if (rank && !(fc && fc.label.startsWith("AP"))) right_side.push({ text: rank, look: rankLook(rank) });
-  if (fc) right_side.push({ text: fc.label, look: markLook(fc.label) });
-  if (sync) right_side.push({ text: sync.label, look: markLook(sync.label) });
-  right_side.forEach((p, i) => outlined(ctx, p.text, right, top + line / 2 + i * (line + STATS.gap), { ...letters, ...p.look }));
+  rightSide(play).forEach((p, i) => outlined(ctx, p.text, right, top + line / 2 + i * (line + STATS.gap), { ...letters, ...p.look }));
 
   const ach = achievementText(play.achievement);
   if (ach) {
