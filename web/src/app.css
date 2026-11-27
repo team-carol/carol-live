@@ -342,6 +342,8 @@
   border-radius: var(--crl-radius-control);
   border: 1px solid var(--crl-border);
   background: var(--crl-canvas-alt);
+}
+.shorts__preview.is-draggable {
   cursor: ns-resize;
   touch-action: none;
 }

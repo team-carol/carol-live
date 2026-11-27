@@ -1,8 +1,7 @@
 // Turns a part of a recording into a 1080×1920 shorts mp4 in the browser: every frame is decoded,
-// the song card is stamped on it and it is encoded again (WebCodecs via mediabunny). Audio is copied as is.
+// the layout's overlay is stamped on it and it is encoded again (WebCodecs via mediabunny). Audio is copied as is.
 import { BufferTarget, Conversion, Input, MP4, Mp4OutputFormat, Output, Quality, UrlSource, canEncodeVideo } from "mediabunny";
-import { CARD, SHORTS } from "./card.ts";
-import { coverRect } from "./images.ts";
+import { SHORTS, drawFrame, type ShortsLayout } from "./layout.ts";
 
 /** enough for 1080×1920 play footage with a lot of motion; a 2:30 song comes out around 190MB */
 const VIDEO_BITRATE = 10_000_000;
@@ -12,9 +11,7 @@ export interface ShortsRequest {
   url: string;
   from: number;
   to: number;
-  /** song card bitmap (renderCard) and where its top edge goes in the 1920-high frame */
-  card: CanvasImageSource | null;
-  cardY: number;
+  layout: ShortsLayout;
   onProgress?: (ratio: number) => void;
   signal?: AbortSignal;
 }
@@ -57,9 +54,7 @@ export async function renderShorts(req: ShortsRequest): Promise<{ blob: Blob; du
           processedWidth: W,
           processedHeight: H,
           process: (sample) => {
-            const r = coverRect(sample.displayWidth, sample.displayHeight, W, H);
-            sample.draw(ctx, r.x, r.y, r.w, r.h);
-            if (req.card) ctx.drawImage(req.card, CARD.x, req.cardY);
+            drawFrame(ctx, req.layout, sample.displayWidth, sample.displayHeight, (x, y, w, h) => sample.draw(ctx, x, y, w, h));
             return canvas;
           },
         };

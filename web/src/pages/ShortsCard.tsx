@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Button, Card } from "@team-carol/design-system/react";
+import { api, type MaimaiProfile } from "../api";
 import { clock } from "../format";
-import { CARD, CARD_MAX_Y, SHORTS, loadCardFonts, loadCardImages, renderCard } from "../lib/shorts/card";
-import { coverRect } from "../lib/shorts/images";
+import { CARD, type CardImages } from "../lib/shorts/card";
+import { loadFonts } from "../lib/shorts/draw";
+import { CARD_MAX_Y, SHORTS, cardLayout, drawFrame, legacyLayout, loadCardImages } from "../lib/shorts/layout";
 import type { Play } from "../lib/songs";
+import { link } from "../router";
 
 /** YouTube Shorts takes videos up to 3 minutes */
 const SHORTS_MAX_SECONDS = 180;
@@ -16,6 +19,16 @@ const PRESETS = [
   { label: "위", y: CARD.defaultY },
   { label: "아래", y: 1520 - CARD.height - 30 },
 ];
+type Mode = "card" | "legacy";
+const PREFS_KEY = "carol.shorts";
+
+function readPrefs(): { mode?: Mode; background?: boolean } {
+  try {
+    return JSON.parse(localStorage.getItem(PREFS_KEY) ?? "{}") ?? {};
+  } catch {
+    return {};
+  }
+}
 
 interface Props {
   play: Play;
@@ -33,34 +46,66 @@ interface Props {
 
 export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onBusy, onDone, onClose }: Props) {
   const preview = useRef<HTMLCanvasElement>(null);
-  const [card, setCard] = useState<HTMLCanvasElement | null>(null);
+  const [mode, setMode] = useState<Mode>(() => (readPrefs().mode === "legacy" ? "legacy" : "card"));
+  const [background, setBackground] = useState(() => readPrefs().background !== false);
   const [y, setY] = useState(CARD.defaultY);
+  const [align, setAlign] = useState(0.55);
+  const [zoom, setZoom] = useState(1);
   const [guide, setGuide] = useState(false);
+  const [fonts, setFonts] = useState(false);
+  const [images, setImages] = useState<CardImages>({});
+  /** undefined while loading, null when the user has not imported one */
+  const [profile, setProfile] = useState<MaimaiProfile | null | undefined>(undefined);
   const [supported, setSupported] = useState<boolean | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
 
-  // the card bitmap: lettering first, then again with maimai DX NET images once they arrive
   useEffect(() => {
-    let alive = true;
-    setCard(null);
-    (async () => {
-      await loadCardFonts();
-      if (!alive) return;
-      setCard(renderCard(play));
-      const images = await loadCardImages(play);
-      if (alive && Object.keys(images).length) setCard(renderCard(play, images));
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [play]);
-
-  useEffect(() => {
+    api.maimaiProfile().then(
+      (r) => setProfile(r.profile),
+      () => setProfile(null),
+    );
     import("../lib/shorts/render").then((m) => m.shortsSupported()).then(setSupported, () => setSupported(false));
     return () => abort.current?.abort();
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ mode, background }));
+    } catch {
+      // only a convenience
+    }
+  }, [mode, background]);
+
+  // fonts for every text on the overlay (title, name, trophy, dan) before the first draw
+  useEffect(() => {
+    if (profile === undefined) return;
+    let alive = true;
+    const text = [play.title, profile?.name, profile?.trophy, "初二三四五六七八九十真裏皆伝段"].filter(Boolean).join("");
+    loadFonts(text).then(() => alive && setFonts(true));
+    return () => {
+      alive = false;
+    };
+  }, [play, profile]);
+
+  // maimai DX NET images: the overlay is drawn with letters first and again once they arrive
+  useEffect(() => {
+    if (profile === undefined) return;
+    let alive = true;
+    setImages({});
+    loadCardImages(play, profile).then((loaded) => alive && setImages(loaded));
+    return () => {
+      alive = false;
+    };
+  }, [play, profile]);
+
+  const layout = useMemo(() => {
+    if (!fonts) return null;
+    return mode === "card"
+      ? cardLayout(play, images, y, { align, zoom })
+      : legacyLayout(play, profile ?? null, images, { background, align, zoom });
+  }, [fonts, mode, play, images, y, profile, background, align, zoom]);
 
   const paint = useCallback(() => {
     const c = preview.current;
@@ -69,16 +114,13 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     const ctx = c.getContext("2d")!;
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, SHORTS.width, SHORTS.height);
-    if (v && v.readyState >= 2 && v.videoWidth) {
-      const r = coverRect(v.videoWidth, v.videoHeight, SHORTS.width, SHORTS.height);
-      ctx.drawImage(v, r.x, r.y, r.w, r.h);
-    }
-    if (card) ctx.drawImage(card, CARD.x, y);
+    const ready = !!v && v.readyState >= 2 && v.videoWidth > 0;
+    if (layout) drawFrame(ctx, layout, ready ? v!.videoWidth : 0, ready ? v!.videoHeight : 0, (x, yy, w, h) => ctx.drawImage(v!, x, yy, w, h));
     if (guide) {
       ctx.fillStyle = "rgba(255, 80, 80, 0.3)";
       for (const z of UI_ZONES) ctx.fillRect(z.x, z.y, z.w, z.h);
     }
-  }, [video, card, y, guide]);
+  }, [video, layout, guide]);
 
   useEffect(() => {
     paint();
@@ -97,17 +139,21 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     };
   }, [paint, video]);
 
-  // drag the card up and down right on the preview
-  const drag = useRef<{ at: number; y: number } | null>(null);
+  // drag on the preview: the card in card mode, the footage in legacy mode
+  const busy = progress !== null;
+  const draggable = !busy;
+  const drag = useRef<{ at: number; y: number; align: number } | null>(null);
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (progress !== null) return;
-    drag.current = { at: e.clientY, y };
+    if (!draggable) return;
+    drag.current = { at: e.clientY, y, align };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!drag.current) return;
-    const scale = SHORTS.height / e.currentTarget.getBoundingClientRect().height;
-    setY(Math.round(Math.min(CARD_MAX_Y, Math.max(0, drag.current.y + (e.clientY - drag.current.at) * scale))));
+    const moved = ((e.clientY - drag.current.at) * SHORTS.height) / e.currentTarget.getBoundingClientRect().height;
+    if (mode === "card") setY(Math.round(Math.min(CARD_MAX_Y, Math.max(0, drag.current.y + moved))));
+    // pulling the footage down shows more of its top
+    else setAlign(Math.min(1, Math.max(0, drag.current.align - moved / 800)));
   };
   const onPointerUp = () => {
     drag.current = null;
@@ -115,13 +161,14 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
 
   const length = to - from;
   const make = async () => {
+    if (!layout) return;
     setError(null);
     setProgress(0);
     onBusy(true);
     abort.current = new AbortController();
     try {
       const { renderShorts } = await import("../lib/shorts/render");
-      const res = await renderShorts({ url: fileUrl, from, to, card, cardY: y, onProgress: setProgress, signal: abort.current.signal });
+      const res = await renderShorts({ url: fileUrl, from, to, layout, onProgress: setProgress, signal: abort.current.signal });
       const url = URL.createObjectURL(res.blob);
       onDone({ name, url, size: res.blob.size, duration: res.duration });
       const a = document.createElement("a");
@@ -137,11 +184,13 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
     }
   };
 
+  const chip = (on: boolean) => `crl-chip nudge${on ? " is-on" : ""}`;
+
   return (
     <Card className="shorts">
       <div className="songs__head">
         <h2 className="crl-card__title">쇼츠 만들기</h2>
-        <button type="button" className="crl-chip nudge shorts__close" onClick={onClose} disabled={progress !== null}>
+        <button type="button" className="crl-chip nudge shorts__close" onClick={onClose} disabled={busy}>
           닫기
         </button>
       </div>
@@ -152,41 +201,103 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
       <div className="shorts__body">
         <canvas
           ref={preview}
-          className="shorts__preview"
+          className={`shorts__preview${draggable ? " is-draggable" : ""}`}
           width={SHORTS.width}
           height={SHORTS.height}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
-          aria-label="쇼츠 미리보기. 카드를 위아래로 끌어서 옮길 수 있음"
+          aria-label="쇼츠 미리보기"
         />
         <div className="shorts__controls">
-          <label className="crl-label" htmlFor="shorts-y">
-            곡 카드 위치
+          <span className="crl-label">레이아웃</span>
+          <div className="nudges" role="group" aria-label="레이아웃">
+            <button type="button" className={chip(mode === "card")} aria-pressed={mode === "card"} disabled={busy} onClick={() => setMode("card")}>
+              곡 카드
+            </button>
+            <button type="button" className={chip(mode === "legacy")} aria-pressed={mode === "legacy"} disabled={busy} onClick={() => setMode("legacy")}>
+              레거시
+            </button>
+          </div>
+
+          {mode === "card" ? (
+            <>
+              <label className="crl-label" htmlFor="shorts-y">
+                곡 카드 위치
+              </label>
+              <input
+                id="shorts-y"
+                className="shorts__slider"
+                type="range"
+                min={0}
+                max={Math.floor(CARD_MAX_Y)}
+                step={2}
+                value={y}
+                disabled={busy}
+                onChange={(e) => setY(Number(e.target.value))}
+              />
+              <div className="nudges">
+                {PRESETS.map((p) => (
+                  <button key={p.label} type="button" className="crl-chip nudge" disabled={busy} onClick={() => setY(Math.round(p.y))}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="nudges">
+                <button type="button" className={chip(background)} aria-pressed={background} disabled={busy} onClick={() => setBackground((b) => !b)}>
+                  파란 배경
+                </button>
+              </div>
+              {profile === null && (
+                <p className="crl-helper">
+                  프로필이 아직 없어서 곡 카드만 들어감. <a {...link("/maimai")}>maimai 메뉴</a>에서 북마크를 새로 등록하고 기록 페이지에서 한 번
+                  누르면 프로필 카드가 같이 나옴.
+                </p>
+              )}
+            </>
+          )}
+
+          <label className="crl-label" htmlFor="shorts-align">
+            영상 높이 (위 ↔ 아래)
           </label>
           <input
-            id="shorts-y"
+            id="shorts-align"
             className="shorts__slider"
             type="range"
             min={0}
-            max={Math.floor(CARD_MAX_Y)}
-            step={2}
-            value={y}
-            disabled={progress !== null}
-            onChange={(e) => setY(Number(e.target.value))}
+            max={100}
+            value={Math.round(align * 100)}
+            disabled={busy}
+            onChange={(e) => setAlign(Number(e.target.value) / 100)}
           />
+          <label className="crl-label" htmlFor="shorts-zoom">
+            영상 확대 {Math.round(zoom * 100)}%
+          </label>
+          <input
+            id="shorts-zoom"
+            className="shorts__slider"
+            type="range"
+            min={100}
+            max={200}
+            step={5}
+            value={Math.round(zoom * 100)}
+            disabled={busy}
+            onChange={(e) => setZoom(Number(e.target.value) / 100)}
+          />
+
           <div className="nudges">
-            {PRESETS.map((p) => (
-              <button key={p.label} type="button" className="crl-chip nudge" disabled={progress !== null} onClick={() => setY(Math.round(p.y))}>
-                {p.label}
-              </button>
-            ))}
-            <button type="button" className={`crl-chip nudge${guide ? " is-on" : ""}`} aria-pressed={guide} onClick={() => setGuide((g) => !g)}>
+            <button type="button" className={chip(guide)} aria-pressed={guide} onClick={() => setGuide((g) => !g)}>
               쇼츠 UI 영역
             </button>
           </div>
-          <p className="crl-helper">미리보기에서 카드를 끌어도 됨. 빨간 영역은 쇼츠 앱의 제목·버튼이 덮는 대략적인 자리.</p>
+          <p className="crl-helper">
+            미리보기에서 {mode === "card" ? "카드" : "영상"}를 위아래로 끌어도 됨. 영상이 화면에 딱 맞으면 높이를 옮길 여유가 없으니 확대를
+            올리면 됨. 빨간 영역은 쇼츠 앱의 제목·버튼이 덮는 대략적인 자리.
+          </p>
         </div>
       </div>
 
@@ -198,8 +309,8 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
       )}
 
       <div className="panel-actions">
-        {progress === null ? (
-          <Button variant="primary" onClick={make} disabled={disabled || !supported || !card || length <= 0.1}>
+        {!busy ? (
+          <Button variant="primary" onClick={make} disabled={disabled || !supported || !layout || length <= 0.1}>
             쇼츠 만들기
           </Button>
         ) : (
@@ -217,7 +328,7 @@ export function ShortsCard({ play, video, fileUrl, from, to, name, disabled, onB
         </>
       )}
       {error && <p className="crl-helper crl-helper--error">{error}</p>}
-      <p className="crl-helper">화면을 9:16으로 채우고 다시 인코딩함 (1080×1920). 소리는 원본 그대로.</p>
+      <p className="crl-helper">1080×1920으로 다시 인코딩함. 소리는 원본 그대로.</p>
     </Card>
   );
 }

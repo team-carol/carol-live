@@ -55,3 +55,42 @@ function scrapeMaimaiRecord(doc) {
   }
   return out;
 }
+
+// The player's profile block, as shown on /maimai-mobile/playerData/ (the bookmarklet fetches that page from
+// the record page). Used for the profile card of the legacy shorts layout. Returns null when it is not there.
+function scrapeMaimaiProfile(doc) {
+  const box = doc.querySelector(".see_through_block .basic_block") || doc.querySelector(".basic_block");
+  const name = box && ((box.querySelector(".name_block") || {}).textContent || "").trim();
+  if (!name) return null;
+  const imgs = [...box.querySelectorAll("img")].map((i) => i.getAttribute("src") || "");
+  const src = (re) => {
+    for (const s of imgs) {
+      const m = s.match(re);
+      if (m) return m[1];
+    }
+    return null;
+  };
+  const num = (text) => {
+    const n = Number(String(text || "").replace(/[^\d]/g, ""));
+    return String(text || "").match(/\d/) && Number.isFinite(n) ? n : undefined;
+  };
+  const trophy = box.querySelector(".trophy_block");
+  const star = [...box.querySelectorAll("img")].find((i) => /icon_star/.test(i.getAttribute("src") || ""));
+  // "play count of current version : 519 / total play count : 2,795" in the site's language, right under the block
+  const counts = (((box.parentElement || doc).querySelector(".t_r.f_12") || {}).textContent || "").match(/\d[\d,]*/g) || [];
+  const course = src(/course\/course_rank_(\d+)/);
+  const cls = src(/class\/class_rank_s_(\d+)/);
+  return {
+    name,
+    rating: num((box.querySelector(".rating_block") || {}).textContent),
+    ratingBase: src(/rating_base_([a-z_]+)\.png/) || undefined,
+    trophy: trophy ? trophy.textContent.trim() : undefined,
+    trophyRank: trophy ? ((trophy.className || "").match(/trophy_(Normal|Bronze|Silver|Gold|Rainbow)/i) || [])[1] : undefined,
+    icon: imgs.find((s) => /img\/Icon\//.test(s)) || undefined,
+    course: course === null ? undefined : Number(course),
+    cls: cls === null ? undefined : Number(cls),
+    stars: star ? num(star.parentElement.textContent) : undefined,
+    playCountCurrent: counts.length > 1 ? num(counts[0]) : undefined,
+    playCount: counts.length ? num(counts[counts.length - 1]) : undefined,
+  };
+}

@@ -2,91 +2,54 @@
 import { maimaiClear } from "@team-carol/design-system/game";
 import { achievementText, difficultyColor, difficultyLabel, markOf, rankColor, rankLabel } from "../maimaiLabels.ts";
 import type { Play } from "../songs.ts";
-import { cardImageUrls, type CardImageKey } from "./images.ts";
+import { CAP, INK, WHITE, canvas, fitText, font, mix, outlined, outlinedWidth, roundRect, type Ctx, type Paint, type Stops } from "./draw.ts";
+import type { CardImageKey } from "./images.ts";
 
-export const SHORTS = { width: 1080, height: 1920 };
-/** card box inside the frame; the bitmap is a little taller for the hard shadow */
+/** card box; the bitmap is a little taller for the hard shadow */
 export const CARD = { x: 16, width: 1048, height: 255.4, shadow: 5.2, defaultY: 110 };
-export const CARD_MAX_Y = SHORTS.height - CARD.height - CARD.shadow;
 
 export type CardImages = Partial<Record<CardImageKey, ImageBitmap>>;
-type Ctx = CanvasRenderingContext2D;
+/**
+ * "card": rank and marks are maimai DX NET's images, the achievement is bold.
+ * "legacy": exactly the Figma card, with rank and marks as outlined letters.
+ */
+export type CardStyle = "card" | "legacy";
 
 // Colours of the video overlay itself (not the site UI, so not --crl-* tokens)
-const INK = "#2b2b2b";
 const TITLE_BAR = "#4d4d4d";
-const WHITE = "#ffffff";
-const MASTER = "#9333ea";
-const FAMILY = '"Pretendard", "Pretendard Variable", "Noto Sans JP", system-ui, sans-serif';
-const font = (weight: number, size: number) => `${weight} ${size}px ${FAMILY}`;
-/** cap height of Pretendard, to centre capitals and digits on a line */
-const CAP = 0.72;
+const MASTER = { edge: "#934ada", bg: "#cb9ff4" };
 
-function mix(a: string, b: string, t: number): string {
-  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-  const [x, y] = [p(a), p(b)];
-  return `#${x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join("")}`;
-}
+/** letter fills of the Figma card: SSS+ is the pastel rainbow, FC green, sync marks light blue */
+const SSS: Stops = [
+  [0.017, "#b6daff"],
+  [0.296, "#f4ff78"],
+  [0.538, "#ffc0c0"],
+  [0.766, "#c0ff89"],
+];
+const LETTER_RANK: Record<string, { fill: Paint; stroke: string }> = {
+  SSS: { fill: SSS, stroke: "#af624f" },
+  SS: { fill: [[0.02, "#fff9b8"], [0.55, "#ffd95a"], [0.98, "#ffeaa0"]], stroke: "#a8741a" },
+  S: { fill: [[0.02, "#ffe2bd"], [0.55, "#ffa868"], [0.98, "#ffd0a6"]], stroke: "#b0532a" },
+  other: { fill: [[0.02, "#d8ebff"], [0.55, "#86bcff"], [0.98, "#c4dfff"]], stroke: "#2f5fa8" },
+};
+const LETTER_MARK: Record<string, { fill: Paint; stroke: string }> = {
+  AP: { fill: [[0.02, "#fff9b8"], [0.55, "#ffd95a"], [0.98, "#ffeaa0"]], stroke: "#a8741a" },
+  FC: { fill: "#81de77", stroke: "#3e8e43" },
+  sync: { fill: "#bddfff", stroke: "#4a6fa5" },
+};
 
-function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-}
-
-interface Outline {
-  size: number;
-  fill: string;
-  stroke: string;
-  /** stroke width outside the letters */
-  width: number;
-  /** colour of the hard shadow below (already mixed with what is behind it) */
-  shadow: string;
-  drop: number;
-  align?: CanvasTextAlign;
-}
-
-/** capital letters / digits with an outer stroke and a hard shadow, centred on [cy] */
-function outlined(ctx: Ctx, text: string, x: number, cy: number, o: Outline) {
-  ctx.font = font(800, o.size);
-  ctx.textAlign = o.align ?? "left";
-  ctx.textBaseline = "alphabetic";
-  ctx.lineJoin = "round";
-  ctx.lineWidth = o.width * 2;
-  const y = cy + (o.size * CAP) / 2;
-  for (const [dy, fill, stroke] of [
-    [o.drop, o.shadow, o.shadow],
-    [0, o.fill, o.stroke],
-  ] as const) {
-    ctx.strokeStyle = stroke;
-    ctx.strokeText(text, x, y + dy);
-    ctx.fillStyle = fill;
-    ctx.fillText(text, x, y + dy);
-  }
-}
-
-function outlinedWidth(ctx: Ctx, text: string, size: number, width: number): number {
-  ctx.font = font(800, size);
-  return ctx.measureText(text).width + width * 2;
-}
-
-/** shrinks, then cuts with … so [text] fits [max] */
-function fitText(ctx: Ctx, text: string, weight: number, size: number, min: number, max: number): { text: string; size: number } {
-  let s = size;
-  ctx.font = font(weight, s);
-  while (s > min && ctx.measureText(text).width > max) {
-    s -= 1;
-    ctx.font = font(weight, s);
-  }
-  let t = text;
-  while (t.length > 1 && ctx.measureText(t === text ? t : `${t}…`).width > max) t = t.slice(0, -1);
-  return { text: t === text ? t : `${t.trimEnd()}…`, size: s };
+function legacyLetters(label: string, kind: "rank" | "mark"): { fill: Paint; stroke: string } {
+  if (kind === "rank") return LETTER_RANK[label.replace("+", "")] ?? LETTER_RANK.other;
+  return LETTER_MARK[label.replace("+", "")] ?? LETTER_MARK.sync;
 }
 
 /** draws the card with its top-left corner at 0,0 */
-export function drawSongCard(ctx: Ctx, play: Play, images: CardImages = {}) {
+export function drawSongCard(ctx: Ctx, play: Play, images: CardImages = {}, style: CardStyle = "card") {
   const d = play.details ?? {};
-  const edge = difficultyColor(play.difficulty) ?? MASTER;
-  const bg = mix(edge, WHITE, 0.55);
+  const token = difficultyColor(play.difficulty);
+  // MASTER keeps the exact Figma pair; the other difficulties get the same tint of their game colour
+  const edge = play.difficulty === "master" || !token ? MASTER.edge : token;
+  const bg = play.difficulty === "master" || !token ? MASTER.bg : mix(token, WHITE, 0.55);
   const shade = mix(bg, "#000000", 0.6);
   const pad = 20.8;
   const jacket = 213.8;
@@ -148,18 +111,21 @@ export function drawSongCard(ctx: Ctx, play: Play, images: CardImages = {}) {
 
   // achievement on the left; rank, FC and sync marks on the right
   const rowCy = pad + 159.2 + 27.3;
+  const legacy = style === "legacy";
   const ach = achievementText(play.achievement);
   let achW = 0;
   if (ach) {
-    ctx.font = font(600, 34);
-    achW = ctx.measureText(ach).width + 36;
+    const size = legacy ? 31.2 : 34;
+    const padX = legacy ? 15.6 : 18;
+    ctx.font = font(legacy ? 400 : 600, size);
+    achW = legacy ? 250 : ctx.measureText(ach).width + padX * 2;
     ctx.fillStyle = WHITE;
     roundRect(ctx, detailX, rowCy - 27.5, achW, 55, 15.6);
     ctx.fill();
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillStyle = INK;
-    ctx.fillText(ach, detailX + 18, rowCy + (34 * CAP) / 2);
+    ctx.fillText(ach, detailX + padX, rowCy + (size * CAP) / 2);
   }
   type Piece = { w: number; draw: (x: number, scale: number) => void };
   const pieces: Piece[] = [];
@@ -167,27 +133,27 @@ export function drawSongCard(ctx: Ctx, play: Play, images: CardImages = {}) {
     w: (img.width / img.height) * h,
     draw: (x, s) => ctx.drawImage(img, x, rowCy - (h * s) / 2, (img.width / img.height) * h * s, h * s),
   });
-  const lettering = (text: string, color: string | undefined): Piece => ({
-    w: outlinedWidth(ctx, text, 41.6, 4),
-    draw: (x, s) =>
-      outlined(ctx, text, x + 4 * s, rowCy, {
-        size: 41.6 * s,
-        fill: mix(color ?? maimaiClear.SYNC, WHITE, 0.55),
-        stroke: mix(color ?? maimaiClear.SYNC, "#000000", 0.3),
-        width: 4 * s,
-        shadow: shade,
-        drop: 3.9 * s,
-      }),
-  });
-  if (images.rank) pieces.push(image(images.rank, 50));
-  else if (d.rank) pieces.push(lettering(rankLabel(d.rank) ?? "", rankColor(d.rank)));
+  const lettering = (text: string, look: { fill: Paint; stroke: string }, box?: number): Piece => {
+    const w = outlinedWidth(ctx, text, 41.6, 4);
+    return {
+      w: Math.max(w, box ?? 0),
+      draw: (x, s) =>
+        outlined(ctx, text, x + (Math.max(w, box ?? 0) * s) / 2, rowCy, { size: 41.6 * s, ...look, width: 4 * s, shadow: shade, drop: 3.9 * s, align: "center" }),
+    };
+  };
+  const tinted = (color: string | undefined) => ({ fill: mix(color ?? maimaiClear.SYNC, WHITE, 0.55), stroke: mix(color ?? maimaiClear.SYNC, "#000000", 0.3) });
+  // the Figma card gives the rank and the FC mark a 117 px box each
+  const box = legacy ? 117 : undefined;
+  const rank = rankLabel(d.rank);
+  if (!legacy && images.rank) pieces.push(image(images.rank, 50));
+  else if (rank) pieces.push(lettering(rank, legacy ? legacyLetters(rank, "rank") : tinted(rankColor(d.rank)), box));
   for (const k of ["fc", "sync"] as const) {
     const img = images[k];
     const m = markOf(d[k]);
-    if (img) pieces.push(image(img, 50));
-    else if (m) pieces.push(lettering(m.label, m.color));
+    if (!legacy && img) pieces.push(image(img, 50));
+    else if (m) pieces.push(lettering(m.label, legacy ? legacyLetters(m.label, "mark") : tinted(m.color), box));
   }
-  const gap = 10;
+  const gap = legacy ? 8 : 10;
   const total = pieces.reduce((a, p) => a + p.w, 0) + gap * Math.max(0, pieces.length - 1);
   const room = detailW - (achW ? achW + 12 : 0);
   const scale = total > room ? room / total : 1;
@@ -205,9 +171,9 @@ export function drawSongCard(ctx: Ctx, play: Play, images: CardImages = {}) {
     ctx.fill();
   }
   if (d.level) {
-    const box = 195 - 10.4 - 26;
-    const size = Math.min(72.8, (72.8 * (box - 12)) / Math.max(1, outlinedWidth(ctx, d.level, 72.8, 6.2)));
-    outlined(ctx, d.level, levelX + 10.4 + 26 + box / 2, pad + jacket / 2, {
+    const room2 = 195 - 10.4 - 26;
+    const size = Math.min(72.8, (72.8 * (room2 - 12)) / Math.max(1, outlinedWidth(ctx, d.level, 72.8, 6.2)));
+    outlined(ctx, d.level, levelX + 10.4 + 26 + room2 / 2, pad + jacket / 2, {
       size,
       fill: WHITE,
       stroke: edge,
@@ -220,32 +186,8 @@ export function drawSongCard(ctx: Ctx, play: Play, images: CardImages = {}) {
 }
 
 /** the card as its own bitmap, drawn once and stamped on every frame */
-export function renderCard(play: Play, images: CardImages = {}): HTMLCanvasElement {
-  const c = document.createElement("canvas");
-  c.width = CARD.width;
-  c.height = Math.ceil(CARD.height + CARD.shadow);
-  drawSongCard(c.getContext("2d")!, play, images);
+export function renderCard(play: Play, images: CardImages = {}, style: CardStyle = "card"): HTMLCanvasElement {
+  const c = canvas(CARD.width, CARD.height + CARD.shadow);
+  drawSongCard(c.getContext("2d")!, play, images, style);
   return c;
-}
-
-/** maimai DX NET images through our server; a missing one just falls back to lettering */
-export async function loadCardImages(play: Play): Promise<CardImages> {
-  const urls = cardImageUrls(play);
-  const out: CardImages = {};
-  await Promise.all(
-    (Object.keys(urls) as CardImageKey[]).map(async (k) => {
-      try {
-        const res = await fetch(urls[k]!, { credentials: "same-origin" });
-        if (res.ok) out[k] = await createImageBitmap(await res.blob());
-      } catch {
-        // keep the lettering
-      }
-    }),
-  );
-  return out;
-}
-
-/** canvas text uses fonts only once they are loaded */
-export async function loadCardFonts(): Promise<void> {
-  await Promise.all([400, 600, 800].map((w) => document.fonts.load(font(w, 40), "가A1")).concat([document.fonts.ready.then(() => [])]));
 }
